@@ -8,7 +8,7 @@ import { getStaticCacheDir, sanitizeStaticCacheProfile } from "../stealth/static
 type ProxyEntry = { server: string; username?: string; password?: string };
 
 const DEFAULT_URLS = [
-  "https://www.joefortune.win/login",
+  "https://www.joefortune.zone/login",
   "https://www.ignitioncasino551.com/login",
 ];
 

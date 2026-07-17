@@ -132,4 +132,4 @@ async function runCalibration(url: string, siteName: string) {
 }
 
 // Run for Joe Fortune immediately
-void runCalibration("https://www.joefortune.win/login", "joefortune");
+void runCalibration("https://www.joefortune.zone/login", "joefortune");

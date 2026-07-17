@@ -11,7 +11,7 @@ import { SocksProxyAgent } from "socks-proxy-agent";
 import { HttpsProxyAgent } from "https-proxy-agent";
 
 const TARGETS = [
-  { name: "joe", url: "https://www.joefortune.win/login" },
+  { name: "joe", url: "https://www.joefortune.zone/login" },
   { name: "ignition", url: "https://www.ignitioncasino.ooo/" },
 ];
 const TIMEOUT_MS = 20_000;

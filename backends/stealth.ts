@@ -136,7 +136,11 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
   }
   
   if (uaProfile && uaProfile.apifyFingerprint && uaProfile.apifyFingerprint.fingerprint) {
-    browserConfig.fingerprint = uaProfile.apifyFingerprint.fingerprint;
+    const clonedFp = JSON.parse(JSON.stringify(uaProfile.apifyFingerprint.fingerprint));
+    if (clonedFp.audio) {
+      delete clonedFp.audio;
+    }
+    browserConfig.fingerprint = clonedFp;
   }
   
   let slot: number | undefined;
@@ -167,6 +171,7 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
 
   let browser: any;
   try {
+    console.log("[STEALTH] Launching Camoufox with:", JSON.stringify(browserConfig, null, 2));
     const launchPromise = StealthBrowser(browserConfig);
     browser = await Promise.race([
       launchPromise,

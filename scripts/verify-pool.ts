@@ -3,7 +3,7 @@ import { createSession } from "../backends/index.js";
 import "dotenv/config";
 
 const PROXY_FILE = "proxy-pool-6.txt";
-const JOE_URL = "https://www.joefortune.win/login";
+const JOE_URL = "https://www.joefortune.zone/login";
 const CONCURRENCY = 15;
 const TIMEOUT_MS = 25000;
 

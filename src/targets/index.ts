@@ -15,7 +15,7 @@ export interface SiteConfig {
 
 export const TargetJoeFortune: SiteConfig = {
   name: "joe",
-  url: "https://www.joefortune.win/login",
+  url: "https://www.joefortune.zone/login",
   fallbackUrls: ["https://www.joefortune.ooo/login"],
   verifyUrl: "/account/cashier/deposit/cc",
   selectors: {
