@@ -1,0 +1,563 @@
+{
+  "fp-r7e4w": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent claims 'Macintosh; Intel Mac OS X', but navigator.platform is 'Linux x86_64'.",
+      "User-Agent claims 'Intel Mac OS X', but hardware.gpu identifies as 'Apple M3 Pro' (Apple Silicon, ARM architecture).",
+      "Hardware GPU is 'Apple M3 Pro', but WebGL renderer is 'SwiftShader' (a software renderer often found in headless browsers/VMs), and vendor is 'Google Inc. (Google)', which is inconsistent with a dedicated Apple GPU.",
+      "The main 'resolution' reports 3840x2056, but 'apifyFingerprint.fingerprint.screen' reports 800x600. These values must match.",
+      "Device Pixel Ratio is 1 for a high-resolution macOS display (3840x2056), which is unusual; a value of 2 (Retina) would be more common.",
+      "Locale settings (geo.locale, ua.locale) are 'en-AU', but navigator.language and accept-language headers are 'en-US'.",
+      "Client Hints (navigator.userAgentData) are largely empty (brands, platform, platformVersion, architecture), which is incorrect for a modern Chrome browser.",
+      "The font list contains 'Segoe UI', which is primarily a Windows system font, making it unusual for a macOS profile, especially in a limited list."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-i2tmac": {
+    "coherent": false,
+    "mismatches": [
+      "The User-Agent claims 'Macintosh; Intel Mac OS X' but the hardware GPU is 'Apple M3 Pro' (Apple Silicon), which is inconsistent. An Intel Mac should have an Intel GPU.",
+      "The navigator.platform ('Linux x86_64') is inconsistent with the User-Agent and declared OS ('Macintosh; Intel Mac OS X', 'macos').",
+      "The primary screen resolution (3840x2056) significantly differs from the screen resolution reported in apifyFingerprint (800x600), which is a common indicator of a headless or virtualized environment not matching the declared profile.",
+      "The navigator.language and accept-language header ('en-US') are inconsistent with the geo.locale and ua.locale ('en-AU') and countryCode ('AU').",
+      "The WebGL renderer reported in apifyFingerprint ('SwiftShader Device', 'Google Inc.') is a software renderer, which contradicts the powerful 'Apple M3 Pro' hardware GPU and is highly unusual for a real macOS user.",
+      "The navigator.userAgentData.brands array is empty for Chrome version 126, which is inconsistent with modern Chrome behavior where brands should be populated."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-1u17t": {
+    "coherent": false,
+    "mismatches": [
+      "The navigator.platform ('Linux x86_64') contradicts the User-Agent string and internal OS detection ('Macintosh; Intel Mac OS X', 'macos').",
+      "The hardware.gpu ('Apple M3 Pro') indicates an Apple Silicon chip, but the User-Agent specifies 'Intel Mac OS X'.",
+      "The reported screen resolution from apifyFingerprint.fingerprint.screen (800x600) is significantly different and much smaller than the top-level resolution (3840x2056). Additionally, innerWidth, innerHeight, clientWidth, and clientHeight are reported as 0, which is highly unusual for a functional browser.",
+      "Multiple locale fields are inconsistent: geo.locale, ua.locale, and ua.country are 'en-AU'/'AU', but apifyFingerprint.navigator.language, apifyFingerprint.navigator.languages, and apifyFingerprint.headers.accept-language are 'en-US'.",
+      "The WebGL renderer ('ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero)... SwiftShader driver)') indicates a software renderer (SwiftShader), which is inconsistent with the declared high-performance 'Apple M3 Pro' GPU and a real macOS environment.",
+      "The navigator.userAgentData.brands array is empty for a Chrome browser, which should typically contain brands like 'Chrome' and 'Not A(Brand'.",
+      "The font list contains fonts primarily associated with Windows ('Segoe UI', 'Tahoma') and lacks common macOS-specific fonts, making it less coherent for a macOS profile."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-jucopd": {
+    "coherent": false,
+    "mismatches": [
+      "Architecture inconsistency: navigator.userAgentData.architecture is 'x86' but the User-Agent string and ua.architecture indicate 'x64', and navigator.userAgentData.bitness is '64'.",
+      "GPU mismatch: The declared 'hardware.gpu' is 'Intel Iris Pro Graphics 580', but the 'videoCard.renderer' reports a 'SwiftShader driver' (software renderer), which is a strong bot indicator.",
+      "Resolution inconsistency: The top-level 'resolution' object (1440x796) differs from the 'apifyFingerprint.fingerprint.screen' object (1366x768).",
+      "Screen dimensions anomaly: 'innerWidth', 'innerHeight', 'clientWidth', and 'clientHeight' within 'apifyFingerprint.fingerprint.screen' are zero or very small (0 or 18), which is highly unusual for a browser window.",
+      "Locale/Language mismatch: The 'ua.locale' and 'geo.locale' are 'en-AU', but 'navigator.language' and the 'accept-language' header are 'en-US'.",
+      "Chrome version inconsistency: 'ua.chromeVersion' (141.0.0.0) does not match 'navigator.userAgentData.uaFullVersion' (141.0.7390.37)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-u6um43": {
+    "coherent": false,
+    "mismatches": [
+      "The navigator.userAgentData.architecture ('x86') conflicts with the main UA architecture ('x64') and navigator.platform ('Linux x86_64').",
+      "The resolution reported by apifyFingerprint.screen (1280x800) does not match the top-level 'resolution' (1920x976).",
+      "There are inconsistencies in location and language: geo.locale (en-AU) and ua.locale (en-AU) conflict with apifyFingerprint.navigator.language (en-US) and the Accept-Language header (en-US).",
+      "The timezone reported by geo.timezone (Australia/Brisbane) conflicts with cache.timezone (Australia/Melbourne).",
+      "The WebGL renderer in apifyFingerprint.videoCard (AMD Radeon) contradicts the hardware.gpu (Intel Arc).",
+      "The apifyFingerprint.fingerprint.fonts array is empty, which is suspicious and inconsistent with the 'fonts.fonts' list provided in the bundle."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-szjvqd": {
+    "coherent": false,
+    "mismatches": [
+      "navigator.userAgentData.platform 'Windows' contradicts navigator.platform 'Linux x86_64' and the operating system indicated in the User-Agent 'Linux x86_64'."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-cmd8ze": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in the User-Agent (145) does not match the Chrome version reported in navigator.userAgentData.brands (114). This is a significant discrepancy.",
+      "The specified navigator.languages (\"en-US\", \"en\") do not optimally align with the timezone \"Australia/Sydney\". Typically, \"en-AU\" would be expected for an Australian locale."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-mnwdnj": {
+    "coherent": false,
+    "mismatches": [
+      "The User-Agent string specifies 'Intel Mac OS X 10_15_7', indicating an Intel-based Mac running macOS Catalina. However, the WebGL renderer explicitly states 'Apple M1 Pro', which is an Apple Silicon chip. These two components are contradictory, as an M1 Pro chip cannot be found in an Intel Mac.",
+      "The macOS version '10_15_7' (Catalina) in the User-Agent is too old for an Apple M1 Pro chip, which was released with macOS Monterey (version 12) or later."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-mo9f25": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent Chrome version (145) does not match Client Hints Google Chrome/Chromium version (141)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-5ujn98": {
+    "coherent": false,
+    "mismatches": [
+      "navigator.userAgent claims 'Intel Mac OS X' but webgl.renderer identifies 'Apple M1 Pro', which is an Apple Silicon chip. These are incompatible.",
+      "navigator.userAgent reports Chrome version 145, while navigator.userAgentData.brands (Client Hints) report Chrome/Chromium version 138. These versions are inconsistent."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-y8navg": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-ledqca": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent indicates 'Linux x86_64' architecture, but navigator.platform reports 'Linux armv81'. These are conflicting CPU architectures for a single native environment.",
+      "WebGL renderer 'Intel(R) HD Graphics' is typically associated with x86/x64 Intel processors and is inconsistent with the 'Linux armv81' platform reported by navigator.platform."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-6yx0b7": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent claims 'Intel Mac OS X 10.15', but the WebGL renderer identifies an 'Apple M1' GPU. Apple M1 chips are found in Apple Silicon Macs, which run macOS 11 (Big Sur) or newer, not Intel Macs with macOS 10.15 (Catalina)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-zakbhl": {
+    "coherent": false,
+    "mismatches": [
+      "The window.innerWidth (2190) is greater than screen.width (2176). This is physically impossible for a browser window contained within the reported screen dimensions."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-tf7v0w": {
+    "coherent": false,
+    "mismatches": [
+      "navigator.userAgent claims macOS (Macintosh; Intel Mac OS X 10_15_7) but navigator.platform reports Linux x86_64. These are contradictory.",
+      "navigator.userAgentData.brands is an empty array, which is inconsistent with a Chrome 138 user agent that should report brand information.",
+      "navigator.userAgentData.platform is an empty string, which is inconsistent with a Chrome user agent that should report the operating system (e.g., 'macOS' or 'Linux')."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-s0zgkh": {
+    "coherent": false,
+    "mismatches": [
+      "The WebGL renderer 'SwiftShader' is a software renderer, which is highly unusual for a Windows desktop operating system and is a strong indicator of a virtualized, headless, or sandboxed environment rather than a natural user session."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-72y03e": {
+    "coherent": false,
+    "mismatches": [
+      "navigator.userAgentData.brands array is empty, but the User-Agent indicates a Chrome browser which should have this populated.",
+      "navigator.userAgentData.platform is empty, but the User-Agent indicates a Windows operating system."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-webbl6": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent and navigator.platform indicate an Intel Mac ('Intel Mac OS X 10_15_7', 'MacIntel'), but the WebGL renderer reports an Apple M4 chip, which is Apple Silicon. These two components are contradictory regarding the underlying hardware."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-93arq2": {
+    "coherent": false,
+    "mismatches": [
+      "screen.innerWidth (1366) is greater than screen.width (1280), which is a logical impossibility for a browser viewport within a screen. The viewport dimensions are inconsistent with the reported screen resolution."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-bbqv7m": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in the User-Agent string (145.0.0.0) does not match the versions reported in navigator.userAgentData.brands (141). This indicates an inconsistency in the reported browser version."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-g2c36k": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in the User-Agent string (145) does not match the Chrome/Chromium versions reported in navigator.userAgentData.brands (147)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-dl3yca": {
+    "coherent": false,
+    "mismatches": [
+      "navigator.userAgent claims Chrome version 145, but navigator.userAgentData.brands list Chrome/Chromium version 137. These versions must be consistent.",
+      "The navigator.languages ('en-US') do not perfectly align with the 'Australia/Sydney' timezone. While possible, 'en-AU' would be more typical for a primary language setting."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-1c8gck": {
+    "coherent": false,
+    "mismatches": [
+      "The navigator.userAgent and navigator.platform indicate an Intel-based Mac (Macintosh; Intel Mac OS X 10_15_7, MacIntel), which is inconsistent with the webgl.renderer identifying an Apple M1 Pro GPU (Apple Silicon).",
+      "The Chrome version in the navigator.userAgent (145.0.0.0) does not match the Chrome versions reported in navigator.userAgentData.brands (143)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-ui79x8": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent claims Intel Mac OS X 10_15_7 and navigator.platform is 'MacIntel', but WebGL renderer identifies an 'Apple M1 Pro' GPU, which is an Apple Silicon chip. This is a direct hardware platform mismatch.",
+      "User-Agent string reports Chrome version 145, but navigator.userAgentData.brands report Chrome/Chromium version 144. These versions should align.",
+      "The primary language 'en-US' is inconsistent with the 'Australia/Sydney' timezone. While possible, it's a common flag for non-organic profiles."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-ipksv2": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-wy0o65": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-ntj8y9": {
+    "coherent": false,
+    "mismatches": [
+      "Primary language 'en-US' is inconsistent with 'Australia/Sydney' timezone. Users in Australia typically have 'en-AU' as their primary language."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-10xsh8": {
+    "coherent": false,
+    "mismatches": [
+      "The primary language 'en-US' in navigator.languages does not typically align with the 'Australia/Sydney' timezone. A user in Sydney would more commonly have 'en-AU' as a preferred language."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-i7hgj3": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent claims 'Intel Mac OS X 10.15' but WebGL renderer 'Apple M1' indicates an ARM-based chip. Apple M1 systems run macOS 11 (Big Sur) or later, not macOS 10.15 (Catalina).",
+      "The primary language 'en-US' in navigator.languages is inconsistent with the 'Australia/Sydney' timezone. For an Australian timezone, 'en-AU' would be more typical."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-e1nd5w": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in navigator.userAgent (145.0.0.0) does not match the versions reported in navigator.userAgentData.brands (Chromium 137, Google Chrome 137)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-8y1nnx": {
+    "coherent": false,
+    "mismatches": [
+      "navigator.languages (en-US) is inconsistent with timezone (Australia/Sydney). Typically, an Australian timezone would be paired with 'en-AU' or a generic 'en' language.",
+      "navigator.userAgentData.brands (Chrome/Chromium 141) does not match the version found in navigator.userAgent (Chrome 145). These versions should be consistent."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-wql4kn": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent (Chrome 145) and Client Hints (Chrome 147) versions do not match for Google Chrome and Chromium."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-a5gtlg": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-ptz26d": {
+    "coherent": false,
+    "mismatches": [
+      "The primary language 'en-US' is inconsistent with the 'Australia/Sydney' timezone. A natural user in Sydney would typically have 'en-AU' or a more generalized 'en' as their primary language, rather than 'en-US'."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-li08dv": {
+    "coherent": false,
+    "mismatches": [
+      "The User-Agent string and navigator.platform indicate an Intel-based Mac (Mac OS X 10.15, MacIntel), but the WebGL renderer identifies an 'Apple M1' chip, which is an ARM-based Apple Silicon processor. These components are contradictory."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-8zzi3l": {
+    "coherent": false,
+    "mismatches": [
+      "navigator.languages ['en-US', 'en'] does not align with 'Australia/Sydney' timezone; 'en-AU' would typically be present, ideally as the primary language."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-hbaswf": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-nsi52p": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-e3orwg": {
+    "coherent": false,
+    "mismatches": [
+      "The primary language 'en-US' does not naturally align with the 'Australia/Sydney' timezone. For a user in Sydney, 'en-AU' would typically be expected as the preferred language."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-lhdqn7": {
+    "coherent": false,
+    "mismatches": [
+      "The WebGL renderer 'SwiftShader' is a software rasterizer, which is atypical for a desktop Linux x86_64 system. This often indicates a virtualized environment or a headless browser, rather than a natural user session with a dedicated or integrated GPU."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-z90b84": {
+    "coherent": false,
+    "mismatches": [
+      "The WebGL renderer string \"Intel Iris OpenGL Engine\" is highly characteristic of macOS systems, not Linux x86_64 as specified in the User-Agent and platform.",
+      "The navigator.userAgentData.brands array is empty, which is inconsistent with a modern Chrome browser (version 137.0.0.0) as indicated in the User-Agent. A real Chrome browser would populate this array with brand information."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-vh0c09": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in navigator.userAgent (145.0.0.0) is a future/unrealistic version number.",
+      "The Chrome version in navigator.userAgent (145) is inconsistent with the Chrome version reported in navigator.userAgentData.brands (116). These versions should match or be very close."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-j7mx4b": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in the User-Agent (145.0.0.0) does not match the Chromium/Google Chrome versions reported in navigator.userAgentData.brands (138)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-o27pn3": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-t1tnkb": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent reports Chrome version 145.0.0.0, which is an unrealistic and futuristic version.",
+      "The Chrome version in the User-Agent (145) contradicts the Chrome version reported in navigator.userAgentData.brands (123)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-sv10qb": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-tdm2ys": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in the User-Agent (145) does not match the Chrome version in the User-Agent Client Hints (105).",
+      "The primary language 'en-US' is inconsistent with the 'Australia/Sydney' timezone."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-uwodov": {
+    "coherent": false,
+    "mismatches": [
+      "The primary language 'en-US' is inconsistent with the 'Australia/Sydney' timezone. A user in Sydney would typically have 'en-AU' or 'en' as their primary language.",
+      "The Chrome version in the User-Agent string (145) is inconsistent with the 'Google Chrome' and 'Chromium' versions reported in navigator.userAgentData.brands (144)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-1jv22o": {
+    "coherent": false,
+    "mismatches": [
+      "Primary language (en-US) does not align with the specified timezone (Australia/Sydney).",
+      "Chrome version in the User-Agent string (145) does not match the version reported in Client Hints (142)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-4ks5bn": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in navigator.userAgent (145.0.0.0) does not match the versions reported in navigator.userAgentData brands (130 for Chromium and Google Chrome)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-1v9djm": {
+    "coherent": false,
+    "mismatches": [
+      "navigator.userAgent reports Chrome version 145.0.0.0, but navigator.userAgentData.brands reports Chrome/Chromium version 120. This is a significant version mismatch between the User-Agent string and Client Hints."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-58vvna": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent Chrome version (145) does not match client hints brands version (120)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-axmlal": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in the User-Agent (145) does not match the Chrome/Chromium versions reported in User-Agent Client Hints (132)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-g80jir": {
+    "coherent": false,
+    "mismatches": [
+      "The primary language (en-US) is inconsistent with the declared timezone (Australia/Sydney).",
+      "The Chrome version in the User-Agent string (145) does not match the versions reported in the User-Agent Client Hints brands (142)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-3lug7n": {
+    "coherent": false,
+    "mismatches": [
+      "Chrome version in navigator.userAgent (145.0.0.0) does not match the Google Chrome/Chromium version in navigator.userAgentData.brands (116). Additionally, Chrome 145 does not currently exist, indicating a manipulated User-Agent string."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-keqyj3": {
+    "coherent": false,
+    "mismatches": [
+      "The primary language 'en-US' is not the most natural choice for a user in 'Australia/Sydney'. 'en-AU' would be more typical for a naturally occurring Australian user session."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-hb63o0": {
+    "coherent": false,
+    "mismatches": [
+      "User-Agent Chrome version (145) does not match Client Hints Chrome version (132)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-qjroo8": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in navigator.userAgent (145) does not match the version reported in navigator.userAgentData.brands for 'Chromium' (143) and 'Google Chrome' (143). This is a strong inconsistency."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-sg97fq": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-91qe28": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version '145.0.0.0' in the User-Agent string is non-existent and significantly newer than current stable releases, indicating potential spoofing.",
+      "The Chrome version in the User-Agent string (145) does not match the versions reported in navigator.userAgentData.brands (123 for 'Chromium' and 'Google Chrome')."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-sa62n7": {
+    "coherent": false,
+    "mismatches": [
+      "The Chrome version in navigator.userAgent (145.0.0.0) does not match the versions reported by navigator.userAgentData.brands for Chromium (142) and Google Chrome (142)."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-lu1gux": {
+    "coherent": false,
+    "mismatches": [
+      "navigator.languages ('en-US', 'en') is inconsistent with timezone ('Australia/Sydney'). While possible, 'en-AU' or 'en' would typically be expected for an Australian timezone, or the timezone should be changed to reflect a US locale."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-2q9th2": {
+    "coherent": false,
+    "mismatches": [
+      "The primary language 'en-US' is inconsistent with the 'Australia/Sydney' timezone. Users in Australia typically have 'en-AU' or 'en-GB' as their primary language."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-t42u6q": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-5akos": {
+    "coherent": false,
+    "mismatches": [
+      "Primary language 'en-US' is inconsistent with timezone 'Australia/Sydney'. While English is spoken, 'en-AU' would be a more natural primary language setting for this timezone."
+    ],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-950cwh": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  },
+  "fp-cihxak": {
+    "coherent": true,
+    "mismatches": [],
+    "fixSuggestions": {},
+    "modelUsed": "gemini-2.5-flash"
+  }
+}

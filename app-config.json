@@ -1,0 +1,33 @@
+{
+  "backend": "stealth",
+  "concurrency": 5,
+  "inputMode": "instant",
+  "allowHumanTyping": false,
+  "alwaysClickRememberMe": true,
+  "maxRetries": 2,
+  "proxyPool": "4r",
+  "fpStrategy": "none",
+  "parallelSiteTesting": false,
+  "ignitionVerifBypass": true,
+  "rotateOnFingerprint": false,
+  "burnOnlyOnPermDisabled": true,
+  "mutateOnRetry": true,
+  "recycleSessionOnIncorrect": false,
+  "manualCaptchaMode": false,
+  "autoOptimizePerBackend": true,
+  "stealthProfile": "autonomous",
+  "enableCacheInjection": false,
+  "advEmulateMobile": false,
+  "injectStealthJS": false,
+  "recordVideo": false,
+  "postLoadDelay": 0,
+  "enableVerification": true,
+  "useHttpCloak": true,
+  "stealthBypassHttpCloak": true,
+  "proxyRotateUrl": "",
+  "tilingLayout": "horizontal",
+  "goldenCredentials": {
+    "joe": "phuttasopit@hotmail.co.th:Tomo06032553",
+    "ignition": "Mattdonor@yahoo.com:Dada0707#"
+  }
+}

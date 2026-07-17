@@ -1,0 +1,39 @@
+[
+  {
+    "backend": "cloakbrowser",
+    "status": "PASS",
+    "duration": 14332,
+    "steps": [
+      {
+        "name": "launch",
+        "status": "PASS",
+        "detail": "CloakBrowser launched (pseudo-headless), pages=1"
+      },
+      {
+        "name": "navigation",
+        "status": "PASS",
+        "detail": "url=https://www.browserscan.net/bot-detection, title=\"BrowserScan - Robot Detection/WebDriver | BrowserScan\", 1907ms"
+      },
+      {
+        "name": "stealthVerification",
+        "status": "PASS",
+        "detail": "webdriver=false, cores=8, mem=8GB, screen=1920x1080, platform=Win32, gpu=ANGLE (NVIDIA, NVIDIA GeForce RTX 3080 (0x0000220A, chrome=true"
+      },
+      {
+        "name": "webrtcLeakCheck",
+        "status": "PASS",
+        "detail": "candidates=0, leaks=0"
+      },
+      {
+        "name": "screenshot",
+        "status": "PASS",
+        "detail": "C:\\Users\\home\\Downloads\\automati1-111\\automati1-111\\lifecycle-test-results\\cloakbrowser-lifecycle.png (68.5KB)"
+      },
+      {
+        "name": "close",
+        "status": "PASS",
+        "detail": "closed in 14332ms"
+      }
+    ]
+  }
+]

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"github-actions.workflows.pinned.refresh.enabled": false,
+		"files.associations": {
+			"**/.github/workflows/*.yml": "yaml",
+			"**/.github/workflows/*.yaml": "yaml"
+		}
+	}
+}
