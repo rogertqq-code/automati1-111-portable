@@ -367,6 +367,7 @@ let currentEnableCacheInjection = loadedConfig.enableCacheInjection;
 let currentInjectStealthJS = loadedConfig.injectStealthJS;
 let currentRecordVideo: boolean = loadedConfig.recordVideo;
 let currentEnablePlaywrightTracing: boolean = loadedConfig.enablePlaywrightTracing;
+let currentTilingLayout: string = loadedConfig.tilingLayout || "auto";
 let currentEngineConfig: EngineConfig | null = null;
 // postLoadDelay has been removed for absolute zero-delay instant execution
 let currentEnableVerification: boolean = loadedConfig.enableVerification;
@@ -1671,12 +1672,13 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
             if (currentBackend === "rotate-backends" || currentBackend === "rotate-backends-headless" || currentBackend === "stealth-fortress" || currentBackend === "speed-blitz" || currentBackend === "headed-recon" || currentBackend === "darwin") {
               // Rotation/experimental modes don't lock to a single strategy, they cycle per credential
             }
+            // Note: msg.data.tilingLayout is deprecated for the "start" message since we use currentTilingLayout directly
             let customGrid: { cols: number, rows: number } | undefined = undefined;
-            if (msg.data?.tilingLayout && msg.data.tilingLayout !== "auto") {
-              const parts = msg.data.tilingLayout.split('x');
+            if (currentTilingLayout !== "auto") {
+              const parts = currentTilingLayout.split('x');
               if (parts.length === 2) {
-                const r = parseInt(parts[0], 10);
-                const c = parseInt(parts[1], 10);
+                const r = parseInt(parts[0] || "", 10);
+                const c = parseInt(parts[1] || "", 10);
                 if (!isNaN(r) && !isNaN(c)) {
                   customGrid = { cols: c, rows: r };
                   // We do NOT override currentConcurrency here.
@@ -2169,15 +2171,15 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
             break;
           }
 
-          case "set-enable-tracing": {
+          case "set-tiling-layout": {
             const v = msg.data?.value;
-            if (typeof v !== "boolean") {
-              ws.send(JSON.stringify({ type: "error", data: { message: "set-enable-tracing: value must be a boolean" } }));
+            if (typeof v !== "string") {
+              ws.send(JSON.stringify({ type: "error", data: { message: "set-tiling-layout: value must be a string" } }));
               return;
             }
-            currentEnablePlaywrightTracing = v;
-            if (currentEngineConfig) currentEngineConfig.enablePlaywrightTracing = v;
-            broadcast({ type: "enable-tracing", data: { value: currentEnablePlaywrightTracing } });
+            currentTilingLayout = v;
+            ConfigStore.save({ tilingLayout: currentTilingLayout });
+            broadcast({ type: "tiling-layout", data: { value: currentTilingLayout } });
             break;
           }
 

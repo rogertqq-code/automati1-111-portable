@@ -3517,6 +3517,15 @@
     }
     function handleCmdPaletteKey(e) {
       if (e.key === 'Escape') return toggleCmdPalette();
+      document.getElementById('advTilingLayout').addEventListener('change', (e) => {
+        ws.send(JSON.stringify({ type: 'set-tiling-layout', data: { value: e.target.value } }));
+        saveUIState();
+      });
+
+      document.getElementById('advEnableVerification').addEventListener('change', (e) => {
+        // ...
+      });
+
       if (e.key === 'ArrowDown') { e.preventDefault(); cmdIndex = Math.min(cmdIndex + 1, filteredCmds.length - 1); updateCmdSelection(); return; }
       if (e.key === 'ArrowUp') { e.preventDefault(); cmdIndex = Math.max(cmdIndex - 1, 0); updateCmdSelection(); return; }
       if (e.key === 'Enter') { e.preventDefault(); executeCmd(cmdIndex); return; }
@@ -3774,6 +3783,9 @@
           ws.send(JSON.stringify({ type: 'set-mutate-on-retry', data: { value: preset.mutateOnRetry } }));
           ws.send(JSON.stringify({ type: 'set-manual-captcha-mode', data: { value: preset.manualCaptcha } }));
           ws.send(JSON.stringify({ type: 'set-max-retries', data: { value: preset.maxRetries } }));
+          if (isHeaded && preset.tiling) {
+            ws.send(JSON.stringify({ type: 'set-tiling-layout', data: { value: preset.tiling } }));
+          }
         }
 
         // Show a toast confirming preset applied
@@ -3972,6 +3984,11 @@
         case 'input-mode': if (m.data && m.data.value !== undefined) { const el = document.getElementById('advInputMode'); if (el) el.value = m.data.value; } break; 
         case 'config-sync':
         case 'config': if (m.data && m.data.config) { const c = m.data.config; if (c.concurrency !== undefined) { const el = document.getElementById('advConcurrency'); if (el) el.value = c.concurrency; } if (c.proxyPool !== undefined) { const el = document.getElementById('advProxyPool'); if (el) el.value = c.proxyPool; } if (c.mode !== undefined) { const el = document.getElementById('advInputMode'); if (el) el.value = c.mode; } if (c.backend !== undefined) { const el = document.getElementById('backendSelect'); if (el) el.value = c.backend; } if (c.fpStrategy !== undefined) { const el = document.getElementById('advFpStrategy'); if (el) el.value = c.fpStrategy; } if (c.useHttpCloak !== undefined) { const h = document.getElementById('advUseHttpCloak'); if (h) h.checked = c.useHttpCloak; } if (c.stealthBypassHttpCloak !== undefined) { const b = document.getElementById('advStealthBypass'); if (b) b.checked = c.stealthBypassHttpCloak; } if (c.injectStealthJS !== undefined) { const s = document.getElementById('advInjectStealthJS'); if (s) s.checked = c.injectStealthJS; } if (c.enableCacheInjection !== undefined) { const ci = document.getElementById('advCacheInjection'); if (ci) ci.checked = c.enableCacheInjection; } if (c.advEmulateMobile !== undefined) { const em = document.getElementById('advEmulateMobile'); if (em) em.checked = c.advEmulateMobile; } if (c._optimalPreviewBackend && c._isMultiBackend) { addLog('INFO', '🔧 Multi-backend mode: UI shows optimal settings for ' + c._optimalPreviewBackend + '. Each backend auto-applies its own optimal config at launch.'); } else if (c._optimalPreviewBackend) { addLog('INFO', '⚡ Auto-applied optimal settings for ' + c._optimalPreviewBackend); } } break; 
+        case 'tiling-layout': {
+          const el = document.getElementById("advTilingLayout");
+          if (el) el.value = m.data.value;
+          break;
+        }
         case 'cache-injection': if (m.data && m.data.value !== undefined) { const el = document.getElementById('advCacheInjection'); if (el) el.checked = m.data.value; } break; 
         case 'record-video': if (m.data && m.data.value !== undefined) { const el = document.getElementById('advRecordVideo'); if (el) el.checked = m.data.value; } break; 
         case 'enable-tracing': if (m.data && m.data.value !== undefined) { const el = document.getElementById('advEnableTracing'); if (el) el.checked = m.data.value; } break; 

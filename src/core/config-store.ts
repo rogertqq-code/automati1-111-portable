@@ -33,7 +33,7 @@ export interface AppConfig {
   useHttpCloak: boolean;
   stealthBypassHttpCloak: boolean;
   proxyRotateUrl: string;
-  tilingLayout: "grid" | "horizontal" | "vertical" | "os-native" | "cascading" | "snap" | "fibonacci" | "chaos" | "portrait-grid";
+  tilingLayout: string;
   goldenCredentials: { joe?: string; ignition?: string };
   spiderApiKey?: string;
 }
