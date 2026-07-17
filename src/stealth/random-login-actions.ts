@@ -470,7 +470,7 @@ export async function maybeScrollToForm(page: Page, selector: string): Promise<v
 // 40% chance: click "remember me" checkbox if present.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export async function maybeClickRememberMe(page: Page): Promise<void> {
+export async function maybeClickRememberMe(_page: Page): Promise<void> {
   // DEPRECATED: Remember Me is now clicked strictly via an early DOM hook in engine.ts (100% of the time, the very first second).
   // Clicking it here would un-check it.
 }

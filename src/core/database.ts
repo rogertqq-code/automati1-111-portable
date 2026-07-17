@@ -110,6 +110,7 @@ export function initDB() {
       error TEXT,
       session_id TEXT,
       recording_url TEXT,
+      final_screenshot_url TEXT,
       batch_index INTEGER DEFAULT 0,
       passwords_tried TEXT, -- JSON string array of passwords attempted
       backend TEXT,
@@ -247,6 +248,13 @@ export function initDB() {
     CREATE INDEX IF NOT EXISTS idx_telemetry_outcome ON session_telemetry(outcome);
     CREATE INDEX IF NOT EXISTS idx_telemetry_backend ON session_telemetry(backend);
   `);
+
+    // Schema Migration for new columns
+    try {
+      db.exec("ALTER TABLE test_runs ADD COLUMN final_screenshot_url TEXT");
+    } catch (e: any) {
+      if (!e.message.includes('duplicate column name')) throw e;
+    }
 
   // ── Schema migrations for existing databases ─────────────────────────────
   // Add columns that didn't exist in older schema versions. Each ALTER is
@@ -575,6 +583,32 @@ export function updateAiVerificationStatus(sessionId: string, status: 'verifying
   pushToWriteQueue(() => {
     getStmt('UPDATE test_runs SET ai_verification_status = ? WHERE session_id = ?').run(status, sessionId);
     getStmt('UPDATE credential_status SET ai_verification_status = ? WHERE session_id = ?').run(status, sessionId);
+  });
+}
+
+export function updateRecordingUrl(email: string, url: string) {
+  pushToWriteQueue(() => {
+    const cred = getStmt('SELECT id FROM credentials WHERE email = ?').get(email) as { id: number } | undefined;
+    if (!cred) return;
+    getStmt(`
+      UPDATE test_runs 
+      SET recording_url = ? 
+      WHERE credential_id = ? 
+      ORDER BY id DESC LIMIT 1
+    `).run(url, cred.id);
+  });
+}
+
+export function updateScreenshotUrl(email: string, outcome: string, url: string) {
+  pushToWriteQueue(() => {
+    const cred = getStmt('SELECT id FROM credentials WHERE email = ?').get(email) as { id: number } | undefined;
+    if (!cred) return;
+    getStmt(`
+      UPDATE test_runs 
+      SET final_screenshot_url = ? 
+      WHERE credential_id = ? AND outcome = ? 
+      ORDER BY id DESC LIMIT 1
+    `).run(url, cred.id, outcome);
   });
 }
 

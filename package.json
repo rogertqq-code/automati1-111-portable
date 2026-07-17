@@ -22,6 +22,7 @@
     "test:visual": "npx vitest run tests/stealth/visual-regression.test.ts",
     "test:e2e": "npx playwright test",
     "test:upload": "npx playwright test && npx tdpw upload ./playwright-report --token=$TESTDINO_TOKEN --upload-html",
+    "test:cloud": "npx tsx src/scripts/test-cloud-pipeline.ts",
     "lint": "eslint src/**/*.ts tests/**/*.ts",
     "test:mutate": "npx stryker run",
     "review": "npx tsx src/hermes/hermes-review.ts",

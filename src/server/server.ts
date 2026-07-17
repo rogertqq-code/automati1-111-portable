@@ -943,10 +943,23 @@ if (gcsUploader) {
   // Attach to screenshot service so all new screenshots get uploaded
   engine.screenshotSvc.setGcsUploader(gcsUploader);
 
-  // Relay GCS upload events to dashboard
+  // Relay GCS upload events to dashboard and persist confident screenshots
   engine.screenshotSvc.on("gcs-uploaded", (data) => {
     broadcast({ type: "gcs-uploaded", data });
     log.info(`[GCS] Uploaded: ${data?.email} → ${data?.gcsUrl}`);
+    
+    // If the upload was for a confident outcome, persist it into the database permanently
+    if (data.email && data.label && data.gcsUrl) {
+      const isTerminal = ["success", "blocked", "honeypot", "permdisabled", "noaccount", "2fa"].some(t => data.label.toLowerCase().includes(t));
+      if (isTerminal) {
+        import("../core/database.js").then((db) => {
+          // Extract the base outcome string from the label for the database lookup
+          const outcomeMatch = data.label.match(/(success|blocked|honeypot|permdisabled|noaccount|2fa)/i);
+          const outcome = outcomeMatch ? outcomeMatch[1].toLowerCase() : data.label;
+          db.updateScreenshotUrl(data.email, outcome, data.gcsUrl);
+        }).catch(() => { /* silent */ });
+      }
+    }
   });
 
   // Ensure bucket exists and backfill existing screenshots on startup
@@ -990,6 +1003,10 @@ engine.on("row-update", (data) => {
         if (res && res.publicUrl) {
           data.recordingUrl = res.publicUrl;
           broadcast({ type: "row-update", data }); // Rebroadcast with updated cloud URL
+          // Persist the cloud video URL to the database
+          import("../core/database.js").then((db) => {
+            db.updateRecordingUrl(data.email, res.publicUrl);
+          }).catch(() => { /* silent */ });
         }
       }).catch(err => log.warn(`[GCS] Live video upload failed for ${data.email}: ${err instanceof Error ? err.message : String(err)}`));
     }

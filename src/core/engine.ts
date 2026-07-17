@@ -13,6 +13,7 @@
 
 import { EventEmitter } from "events";
 import { CONFIDENT_OUTCOMES, saveFingerprintData, saveTestRun } from "./database.js";
+import { AnalyticsAggregator, type BenchmarkReport } from "./analytics.js";
 
 import { type Page } from "playwright-core";
 import fs from 'node:fs';
@@ -934,7 +935,7 @@ export class AutomationEngine extends EventEmitter {
   private shouldMaskEmails: boolean = false;
   private _screenshotSvc: ScreenshotService;
   private _flowScreenshotter: FlowScreenshotter = new FlowScreenshotter();
-  private readonly screenshotRelays: Array<{ event: "screenshot" | "screenshot-error"; handler: (data: any) => void }> = [];
+  private readonly screenshotRelays: Array<{ event: "screenshot" | "screenshot-error" | "gcs-uploaded"; handler: (data: any) => void }> = [];
   /** Consecutive screenshot failure counter. Resets to 0 on any success.
    *  When this reaches SCREENSHOT_FAIL_THRESHOLD (4) AND no recording is
    *  active for the current row, the engine aborts that credential run. */
@@ -985,9 +986,13 @@ export class AutomationEngine extends EventEmitter {
     const screenshotErrorHandler = (data: any) => {
       this.emit("screenshot-error", data);
     };
+    const gcsUploadedHandler = (data: any) => {
+      this.emit("gcs-uploaded", data);
+    };
     this.screenshotRelays.push(
       { event: "screenshot", handler: screenshotHandler },
       { event: "screenshot-error", handler: screenshotErrorHandler },
+      { event: "gcs-uploaded", handler: gcsUploadedHandler },
     );
     for (const { event, handler } of this.screenshotRelays) {
       this._screenshotSvc.on(event, handler);
@@ -6868,6 +6873,13 @@ export class AutomationEngine extends EventEmitter {
         totalTime: 0,
         status: "Racing",
         winner: false,
+        honeypotTriggerRate: 0,
+        proxyBurnRate: 0,
+        avgDomLatencyMs: 0,
+        _failedSites: 0,
+        _honeypots: 0,
+        _burns: 0,
+        _latencies: [] as number[],
       };
       // Add per-site status columns
       for (const { site } of sitesToTest) {
@@ -6983,6 +6995,14 @@ export class AutomationEngine extends EventEmitter {
                 if (result.outcome !== "success") {
                   entry[`${site.name}Status`] = "❌";
                   entry.status = "Failed";
+                  entry._failedSites++;
+                  
+                  if (result.outcome === "honeypot") {
+                    entry._honeypots++;
+                  } else if (result.outcome === "blocked") {
+                    entry._burns++;
+                  }
+
                   entry.totalTime = Date.now() - backendStart;
                   this.log("WARN", `❌ [Race/${backendName}] ${site.name} login failed: ${result.outcome} (${entry[`${site.name}Time`]}ms)`);
                   this.emit("benchmark-update", { isComplete: false, leaderboard, raceStartTime, winner: winnerBackend });
@@ -7081,6 +7101,22 @@ export class AutomationEngine extends EventEmitter {
     }
 
     this.running = false;
+
+    // Finalize metrics calculation
+    for (const entry of leaderboard) {
+      entry.honeypotTriggerRate = sitesToTest.length > 0 ? (entry._honeypots / sitesToTest.length) : 0;
+      entry.proxyBurnRate = sitesToTest.length > 0 ? (entry._burns / sitesToTest.length) : 0;
+      entry.avgDomLatencyMs = entry._latencies.length > 0 ? (entry._latencies.reduce((a: number, b: number) => a + b, 0) / entry._latencies.length) : entry.totalTime;
+    }
+
+    const report: BenchmarkReport = {
+      timestamp: new Date().toISOString(),
+      durationMs: Date.now() - raceStartTime,
+      winner: winnerBackend,
+      metrics: leaderboard,
+    };
+    AnalyticsAggregator.saveBenchmarkReport(report);
+
     this.emit("benchmark-complete", { isComplete: true, leaderboard, raceStartTime, winner: winnerBackend });
     this.emit("complete", { time: Date.now() });
   }

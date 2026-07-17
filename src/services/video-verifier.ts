@@ -57,17 +57,22 @@ export interface VerificationJob {
 // ─── Configuration ─────────────────────────────────────────────────────────────
 
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_AGENT_PLATFORM_API_KEY || "").trim();
+const OPENROUTER_API_KEY = (process.env.OPENROUTER_API_KEY || "").trim();
+
 // eslint-disable-next-line no-constant-binary-expression
 const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-3.1-pro-preview" || "gemini-2.5-flash";
+const OPENROUTER_MODEL_NAME = process.env.OPENROUTER_MODEL || "google/gemini-1.5-pro";
+
 const MAX_FRAMES = 4;
 const FRAME_POSITIONS = [0.25, 0.50, 0.75, 0.90]; // fallback % of video duration
 const FFMPEG_FRAME_TIMEOUT_MS = 25_000;
 const GEMINI_TIMEOUT_MS = 30_000;
 
 let IS_GEMINI_VALID = !!GEMINI_API_KEY;
+let IS_OPENROUTER_VALID = !!OPENROUTER_API_KEY;
 
 export function isVerificationAvailable(): boolean {
-  return IS_GEMINI_VALID;
+  return IS_GEMINI_VALID || IS_OPENROUTER_VALID;
 }
 
 // ─── Frame Extraction ──────────────────────────────────────────────────────────
@@ -285,14 +290,14 @@ IMPORTANT: Focus on the last 3 frames — they show the end state after login at
 You MUST prioritize checking for the exact strings listed in the top 3 priority rules before evaluating structural/layout changes.`;
 
 /**
- * Send extracted frames to Gemini vision and get a verdict.
+ * Send extracted frames to Gemini or OpenRouter vision and get a verdict.
  */
 export async function classifyWithAI(
   frames: Buffer[],
   engineOutcome: string,
   siteName: string,
 ): Promise<VerificationResult> {
-  if (!GEMINI_API_KEY) {
+  if (!GEMINI_API_KEY && !OPENROUTER_API_KEY) {
     return {
       aiVerdict: "unclear",
       confidence: "low",
@@ -312,30 +317,16 @@ export async function classifyWithAI(
       matches: true,
       reasoning: "No frames available for analysis",
       framesAnalyzed: 0,
-      modelUsed: MODEL_NAME,
+      modelUsed: GEMINI_API_KEY ? MODEL_NAME : OPENROUTER_MODEL_NAME,
       durationMs: 0,
       signalAvailable: false,
     };
   }
 
   const start = Date.now();
+  const usedModel = GEMINI_API_KEY ? MODEL_NAME : OPENROUTER_MODEL_NAME;
 
   try {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
-    const model = genAI.getGenerativeModel({ model: MODEL_NAME });
-
-    // Build multimodal parts: images + text
-    const parts: Part[] = [];
-    for (const frame of frames) {
-      parts.push({
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: frame.toString("base64"),
-        },
-      });
-    }
-    parts.push({ text: `Site: ${siteName}\n\n${VERIFICATION_PROMPT}` });
-
     // Structured output schema
     const responseSchema = {
       type: "object",
@@ -359,111 +350,146 @@ export async function classifyWithAI(
     let attempts = 0;
     let responseText = "";
 
-    while (attempts < 3) {
-      try {
-        let timer: NodeJS.Timeout;
-        const result = await Promise.race([
-          model.generateContent({
-            contents: [{ role: "user", parts }],
-            generationConfig: {
-              responseMimeType: "application/json",
-              responseSchema: responseSchema as any,
-            }
-          }),
-          new Promise<never>((_, reject) => {
-            timer = setTimeout(() => reject(new Error("Gemini API timeout")), GEMINI_TIMEOUT_MS);
-          })
-        ]).finally(() => clearTimeout(timer));
-        responseText = result.response.text().trim();
-        break; // Success
-      } catch (err: unknown) {
-        attempts++;
-        const msg = (err instanceof Error ? err.message : String(err)) || String(err);
-        const durationMs = Date.now() - start;
+    if (GEMINI_API_KEY) {
+      const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
-        if (msg.includes("429") || msg.toLowerCase().includes("too many requests")) {
-          if (attempts >= 3) {
-            log.warn(`AI API rate limited after 3 attempts.`);
-            throw err instanceof Error ? err : new Error(String(err));
+      const parts: Part[] = [];
+      for (const frame of frames) {
+        parts.push({ inlineData: { mimeType: "image/jpeg", data: frame.toString("base64") } });
+      }
+      parts.push({ text: `Site: ${siteName}\n\n${VERIFICATION_PROMPT}` });
+
+      while (attempts < 3) {
+        try {
+          let timer: NodeJS.Timeout;
+          const result = await Promise.race([
+            model.generateContent({
+              contents: [{ role: "user", parts }],
+              generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: responseSchema as any,
+              }
+            }),
+            new Promise<never>((_, reject) => {
+              timer = setTimeout(() => reject(new Error("Gemini API timeout")), GEMINI_TIMEOUT_MS);
+            })
+          ]).finally(() => clearTimeout(timer!));
+          responseText = result.response.text().trim();
+          break;
+        } catch (err: unknown) {
+          attempts++;
+          const msg = (err instanceof Error ? err.message : String(err)) || String(err);
+          const durationMs = Date.now() - start;
+
+          if (msg.includes("429") || msg.toLowerCase().includes("too many requests")) {
+            if (attempts >= 3) throw err instanceof Error ? err : new Error(String(err));
+            const backoff = Math.pow(2, attempts) * 1000 + Math.random() * 1000;
+            log.warn(`AI API rate limited (429). Retrying in ${Math.round(backoff)}ms...`);
+            await new Promise(r => setTimeout(r, backoff));
+          } else if (msg.includes("50") || msg.toLowerCase().includes("timeout")) { 
+            if (attempts >= 3) throw err;
+            const backoff = 2000;
+            log.warn(`AI API server error (${msg}). Retrying in ${backoff}ms...`);
+            await new Promise(r => setTimeout(r, backoff));
+          } else if (msg.includes("40") && !msg.includes("429")) { 
+            log.error(`AI API client error: ${msg}. Disabling verification for this session.`);
+            return { aiVerdict: "unclear", confidence: "low", matches: true, reasoning: `AI API client error: ${msg}`, framesAnalyzed: frames.length, modelUsed: usedModel, durationMs, signalAvailable: false };
+          } else {
+            if (attempts >= 3) throw err;
+            await new Promise(r => setTimeout(r, 1000));
           }
-          const backoff = Math.pow(2, attempts) * 1000 + Math.random() * 1000;
-          log.warn(`AI API rate limited (429). Retrying in ${Math.round(backoff)}ms...`);
-          await new Promise(r => setTimeout(r, backoff));
-        } else if (msg.includes("50") || msg.toLowerCase().includes("timeout")) { // 500, 502, 503, 504
-          if (attempts >= 3) {
-            log.warn(`AI API server error/timeout after 3 attempts: ${msg}`);
-            throw err;
+        }
+      }
+    } else {
+      // OpenRouter Fallback
+      const messages = [
+        {
+          role: "user",
+          content: [
+            ...frames.map(frame => ({
+              type: "image_url",
+              image_url: { url: `data:image/jpeg;base64,${frame.toString("base64")}` }
+            })),
+            { type: "text", text: `Site: ${siteName}\n\n${VERIFICATION_PROMPT}` }
+          ]
+        }
+      ];
+
+      while (attempts < 3) {
+        try {
+          let timer: NodeJS.Timeout;
+          const result = await Promise.race([
+            fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://localhost:3000",
+                "X-Title": "Automati1-111 Vision"
+              },
+              body: JSON.stringify({
+                model: OPENROUTER_MODEL_NAME,
+                messages,
+                response_format: { type: "json_object" }
+              })
+            }),
+            new Promise<never>((_, reject) => {
+              timer = setTimeout(() => reject(new Error("OpenRouter API timeout")), GEMINI_TIMEOUT_MS);
+            })
+          ]).finally(() => clearTimeout(timer!));
+          
+          if (!(result as Response).ok) {
+            throw new Error(`OpenRouter HTTP error: ${(result as Response).status} ${(result as Response).statusText}`);
           }
-          const backoff = 2000;
-          log.warn(`AI API server error (${msg}). Retrying in ${backoff}ms...`);
-          await new Promise(r => setTimeout(r, backoff));
-        } else if (msg.includes("40") && !msg.includes("429")) { // 400, 401, 403
-          log.error(`AI API client error: ${msg}. Disabling verification for this session.`);
-          return {
-            aiVerdict: "unclear",
-            confidence: "low",
-            matches: true,
-            reasoning: `AI API client error: ${msg}`,
-            framesAnalyzed: frames.length,
-            modelUsed: MODEL_NAME,
-            durationMs,
-            signalAvailable: false,
-          };
-        } else {
-          if (attempts >= 3) throw err;
-          await new Promise(r => setTimeout(r, 1000));
+          const json = await (result as Response).json();
+          responseText = json.choices[0].message.content.trim();
+          break;
+        } catch (err: unknown) {
+          attempts++;
+          const msg = (err instanceof Error ? err.message : String(err)) || String(err);
+          const durationMs = Date.now() - start;
+
+          if (msg.includes("429") || msg.toLowerCase().includes("too many requests")) {
+            if (attempts >= 3) throw err instanceof Error ? err : new Error(String(err));
+            const backoff = Math.pow(2, attempts) * 1000 + Math.random() * 1000;
+            log.warn(`AI API rate limited (429). Retrying in ${Math.round(backoff)}ms...`);
+            await new Promise(r => setTimeout(r, backoff));
+          } else if (msg.includes("50") || msg.toLowerCase().includes("timeout")) { 
+            if (attempts >= 3) throw err;
+            const backoff = 2000;
+            log.warn(`AI API server error (${msg}). Retrying in ${backoff}ms...`);
+            await new Promise(r => setTimeout(r, backoff));
+          } else if (msg.includes("40") && !msg.includes("429")) { 
+            log.error(`AI API client error: ${msg}. Disabling verification for this session.`);
+            return { aiVerdict: "unclear", confidence: "low", matches: true, reasoning: `AI API client error: ${msg}`, framesAnalyzed: frames.length, modelUsed: usedModel, durationMs, signalAvailable: false };
+          } else {
+            if (attempts >= 3) throw err;
+            await new Promise(r => setTimeout(r, 1000));
+          }
         }
       }
     }
 
     const durationMs = Date.now() - start;
 
-    // Parse JSON response natively
     let parsed: { verdict?: string; confidence?: string; reasoning?: string };
     try {
       parsed = JSON.parse(responseText);
     } catch {
       log.warn(`AI response not valid JSON: ${responseText.slice(0, 200)}`);
-      return {
-        aiVerdict: "unclear",
-        confidence: "low",
-        matches: true,
-        reasoning: `Failed to parse AI response: ${responseText.slice(0, 100)}`,
-        framesAnalyzed: frames.length,
-        modelUsed: MODEL_NAME,
-        durationMs,
-        signalAvailable: false,
-      };
+      return { aiVerdict: "unclear", confidence: "low", matches: true, reasoning: `Failed to parse AI response: ${responseText.slice(0, 100)}`, framesAnalyzed: frames.length, modelUsed: usedModel, durationMs, signalAvailable: false };
     }
 
     const aiVerdict = normalizeVerdict(parsed.verdict || "unclear");
-    const confidence = (parsed.confidence === "high" || parsed.confidence === "medium" || parsed.confidence === "low")
-      ? parsed.confidence : "low";
+    const confidence = (parsed.confidence === "high" || parsed.confidence === "medium" || parsed.confidence === "low") ? parsed.confidence : "low";
     const matches = checkMatch(engineOutcome, aiVerdict);
 
-    return {
-      aiVerdict,
-      confidence,
-      matches,
-      reasoning: parsed.reasoning || "No reasoning provided",
-      framesAnalyzed: frames.length,
-      modelUsed: MODEL_NAME,
-      durationMs,
-      signalAvailable: true,
-    };
+    return { aiVerdict, confidence, matches, reasoning: parsed.reasoning || "No reasoning provided", framesAnalyzed: frames.length, modelUsed: usedModel, durationMs, signalAvailable: true };
   } catch (err) {
     const durationMs = Date.now() - start;
     log.warn(`AI verification failed: ${err instanceof Error ? err.message : String(err)}`);
-    return {
-      aiVerdict: "unclear",
-      confidence: "low",
-      matches: true,  // trust engine on API failure
-      reasoning: `AI API error: ${err instanceof Error ? err.message : String(err)}`,
-      framesAnalyzed: frames.length,
-      modelUsed: MODEL_NAME,
-      durationMs,
-      signalAvailable: false,
-    };
+    return { aiVerdict: "unclear", confidence: "low", matches: true, reasoning: `AI API error: ${err instanceof Error ? err.message : String(err)}`, framesAnalyzed: frames.length, modelUsed: GEMINI_API_KEY ? MODEL_NAME : OPENROUTER_MODEL_NAME, durationMs, signalAvailable: false };
   }
 }
 
