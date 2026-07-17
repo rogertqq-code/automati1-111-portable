@@ -5363,6 +5363,34 @@ export class AutomationEngine extends EventEmitter {
       this._flowScreenshotter.start(sessionId, cred.email, site.name, effectiveBackend ?? this.config?.backend ?? "unknown");
     }
 
+    // --- ASYNC EARLY REMEMBER ME CLICK (strict-early-remember-me) ---
+    // Injected BEFORE navigation so it executes the very first second the element hits the DOM,
+    // even before the page has fully loaded.
+    await page.addInitScript(() => {
+      window.addEventListener('DOMContentLoaded', () => {
+        let clicked = false;
+        const observer = new MutationObserver(() => {
+          if (clicked) return;
+          const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+          for (const el of Array.from(checkboxes)) {
+            const cb = el as HTMLInputElement;
+            if ((cb.id && cb.id.toLowerCase().includes('remember')) || 
+                (cb.name && cb.name.toLowerCase().includes('remember')) ||
+                (cb.getAttribute('data-testid') && cb.getAttribute('data-testid')?.toLowerCase().includes('remember'))) {
+              if (!cb.checked && cb.offsetParent !== null) {
+                cb.click();
+                clicked = true;
+                observer.disconnect();
+                console.log("[Automati] Early Remember Me checked instantly via DOM hook.");
+                break;
+              }
+            }
+          }
+        });
+        observer.observe(document.documentElement, { childList: true, subtree: true });
+      });
+    }).catch(() => {});
+
     // ── Navigate to login page (with fallback & retry) ──
     let origin: string;
     try {
@@ -5405,11 +5433,7 @@ export class AutomationEngine extends EventEmitter {
       throw e;
     }
 
-    // --- ASYNC EARLY REMEMBER ME CLICK (strict-early-remember-me) ---
-    this.log("DEBUG", `  ${site.name}: Waiting for 'Remember Me' to appear asynchronously...`);
-    page.getByText("Remember Me", { exact: false }).waitFor({ state: "visible", timeout: 15000 })
-      .then(() => page.getByText("Remember Me", { exact: false }).click({ timeout: 1000 }))
-      .catch(() => {});
+    // (Early Remember Me logic has been moved to an addInitScript above navigation)
 
     // ── Pre-login warmups have been completely removed for maximum speed ──
 

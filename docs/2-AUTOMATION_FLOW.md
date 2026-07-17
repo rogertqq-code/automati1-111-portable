@@ -17,7 +17,7 @@ It executes a strict **Cascade Dismissal**:
 
 ## 3. Humanized Noise & Biometrics
 To build trust with behavioral analysis engines before injecting credentials:
-- **Remember Me**: 40% of the time, the engine locates and checks the "Remember Me" box *before* focusing the password field.
+- **Remember Me**: 100% of the time, the engine clicks the "Remember Me" checkbox the very exact second it hits the DOM using an early native initialization hook, even before the page has finished loading.
 
 ## 4. Input Emulation Protocol
 Directly assigning `element.value = "..."` is strictly banned.

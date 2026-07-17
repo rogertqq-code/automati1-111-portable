@@ -471,30 +471,8 @@ export async function maybeScrollToForm(page: Page, selector: string): Promise<v
 // ═══════════════════════════════════════════════════════════════════════════════
 
 export async function maybeClickRememberMe(page: Page): Promise<void> {
-  try {
-    const selectors = [
-      'input[type="checkbox"][name*="remember" i]',
-      'input[type="checkbox"][id*="remember" i]',
-      'label[for*="remember" i]',
-      'input[type="checkbox"][name*="keep" i]',
-      '.remember-me input[type="checkbox"]',
-      '#rememberMe',
-    ];
-    for (const sel of selectors) {
-      const el = await page.$(sel);
-      if (el) {
-        const box = await el.boundingBox();
-        if (box) {
-          const pt = randomPointInBox(box);
-          await humanMouseMove(page, pt.x, pt.y);
-          /* stripped sleep */
-          await humanClickAt(page, pt.x, pt.y);
-          log.debug("Clicked 'Remember Me' checkbox");
-          return;
-        }
-      }
-    }
-  } catch { /* intentional */ }
+  // DEPRECATED: Remember Me is now clicked strictly via an early DOM hook in engine.ts (100% of the time, the very first second).
+  // Clicking it here would un-check it.
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -336,27 +336,8 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
     } catch (e) { log.debug?.(`Biometric noise error: ${String(e)}`); }
   })();
 
-  // Early "Remember Me" checkbox activation (async)
-    void (async () => {
-    try {
-      const rememberMeSelectors = [
-        'input[type="checkbox"][name*="remember" i]',
-        'input[type="checkbox"][id*="remember" i]',
-        '[data-testid*="remember" i] input[type="checkbox"]'
-      ];
-      for (const sel of rememberMeSelectors) {
-        const el = await page.waitForSelector(sel, { timeout: 15000, state: "attached" }).catch(() => null);
-        if (el) {
-          const isChecked = await el.isChecked().catch(() => true);
-          if (!isChecked) {
-            await el.check({ force: true }).catch(() => {});
-            log.debug(`✅ Early Remember Me activated`);
-          }
-          break;
-        }
-      }
-    } catch (e) { log.debug?.(`Remember Me activation error: ${String(e)}`); }
-  })();
+  // (Early "Remember Me" checkbox activation has been removed from here. 
+  // It is now an absolute project rule handled instantly via addInitScript in engine.ts)
 
   // ── IMMEDIATE CASCADE CMP DISMISSAL (Golden Template — Rule §6) ──────────
   // This 3-tier cascade was proven critical in the golden tile test:

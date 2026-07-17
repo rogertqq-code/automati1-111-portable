@@ -74,7 +74,7 @@ The final verification step (verifying the cashier page load to confirm a succes
 
 ## Input Emulation Additions
 
-1. **Async Early "Remember Me"**: The "Remember Me" checkbox must be clicked asynchronously as early as possible during the flow, without blocking the main execution thread.
+1. **Async Early "Remember Me" (ABSOLUTE)**: The very first event that happens in each site's script MUST be clicking the "Remember Me" checkbox. This must occur the exact first second the checkbox appears in the DOM, even if the page hasn't fully loaded, and within the first second of it becoming clickable. This is an app-wide and universally adopted rule applying to all backends, modes, and tests. It MUST be implemented via early DOM hooks (e.g. `addInitScript`) to ensure instant execution.
 2. **Unconditional "Show Password"**: The password visibility eye-icon MUST be clicked on every single run to simulate human trust behavior.
 
 ## Directory Isolation (ABSOLUTE — NO EXCEPTIONS)
