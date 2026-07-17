@@ -2858,7 +2858,7 @@ export class AutomationEngine extends EventEmitter {
                   siteTimer.unref?.();
                 });
 
-
+                const siteStartTime = Date.now();
                 const siteWork = (async () => {
                 try {
                   const proxyIdentifier = handle!.proxyKey ?? handle!.proxyUsed;
@@ -3023,6 +3023,10 @@ export class AutomationEngine extends EventEmitter {
                   // Defer DB writes to the macro-task queue to prevent event loop stutter
                   setImmediate(() => {
                     const pws = this.buildPasswordSequence(cred.passwords, runBatchIndex);
+                    const backend = handle?.backend ?? "unknown";
+                    const proxyRegion = handle?.proxyKey ?? "unknown";
+                    const durationMs = Date.now() - siteStartTime;
+                    
                     saveTestRun(
                       cred.email,
                       target.name,
@@ -3031,7 +3035,12 @@ export class AutomationEngine extends EventEmitter {
                       this.rows[idx]!.sessionId,
                       this.rows[idx]!.recordingUrl,
                       this.rows[idx]!.currentBatch,
-                      pws
+                      pws,
+                      backend,
+                      proxyRegion,
+                      0,
+                      durationMs,
+                      undefined
                     );
                   });
                 }

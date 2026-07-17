@@ -37,6 +37,8 @@ import { z } from "zod";
 
 
 import { cleanPreviousZombies, killOurOrphans, startPeriodicZombieReaper, protectPid, unprotectPid } from "../services/process-cleaner.js";
+
+import { generateDeepAnalysis } from "../services/telemetry-analyzer.js";
 import { emailDenylist } from "../core/email-denylist.js";
 
 import { proxyScoreTracker } from "../../backends/index.js";

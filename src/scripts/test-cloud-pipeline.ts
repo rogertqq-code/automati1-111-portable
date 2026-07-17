@@ -24,7 +24,7 @@ async function main() {
     console.log("⚠️ GCP_PROJECT_ID not set. Skipping live GCS upload test.");
   } else {
     try {
-      const gcs = new GcsUploader();
+      const gcs = new GcsUploader({ bucket: "test", accessKeyId: "test", secretAccessKey: "test" });
       const testFilePath = path.join(process.cwd(), "test-artifact.txt");
       fs.writeFileSync(testFilePath, "This is a test artifact for Automati1-111 Cloud Pipeline.");
       

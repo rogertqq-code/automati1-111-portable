@@ -117,6 +117,7 @@ export function initDB() {
       proxy_region TEXT,
       credits_spent REAL DEFAULT 0,
       timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+      duration_ms INTEGER,
       ai_verification_status TEXT DEFAULT 'not verified',
       FOREIGN KEY(credential_id) REFERENCES credentials(id)
     );
@@ -533,6 +534,11 @@ export function saveTestRun(
   recordingUrl?: string,
   batchIndex?: number,
   passwordsTried?: string[],
+  backend?: string,
+  proxyRegion?: string,
+  creditsSpent?: number,
+  durationMs?: number,
+  finalScreenshotUrl?: string,
 ) {
   pushToWriteQueue(() => {
     try {
@@ -542,13 +548,18 @@ export function saveTestRun(
       const encryptedPasswords = passwordsTried ? encrypt(JSON.stringify(passwordsTried)) : null;
 
       getStmt(`
-        INSERT INTO test_runs (credential_id, target_site, outcome, error, session_id, recording_url, batch_index, passwords_tried)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO test_runs (credential_id, target_site, outcome, error, session_id, recording_url, batch_index, passwords_tried, backend, proxy_region, credits_spent, duration_ms, final_screenshot_url)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         cred.id, targetSite, outcome, error || null,
         sessionId || null, recordingUrl || null,
         batchIndex ?? 0,
         encryptedPasswords,
+        backend || null,
+        proxyRegion || null,
+        creditsSpent || 0,
+        durationMs || null,
+        finalScreenshotUrl || null
       );
       
       getStmt(`
