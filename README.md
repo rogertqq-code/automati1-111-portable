@@ -34,6 +34,13 @@ This engine utilizes five distinct browser backends, a 9-vector fingerprinting s
    npm run test
    ```
 
+### 🔄 Maintenance
+To ensure peak evasion performance, routinely update the core browser engines:
+```bash
+npm update
+npm install cloakbrowser@latest camoufox-js@latest
+```
+
 ---
 
 ## 📚 Documentation
