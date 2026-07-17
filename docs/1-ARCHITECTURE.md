@@ -40,3 +40,15 @@ Browser automation inevitably leaks processes. The system runs a rigorous cross-
 - **Windows**: Uses PowerShell WMI querying to extract command lines and creation dates. Kills via `taskkill`.
 - **Unix**: Uses `ps -axo` to extract PIDs and command lines. Graceful `SIGTERM` followed by a hard `SIGKILL` 5 seconds later.
 - **Lifecycle**: Runs a pre-flight sweep on startup (`npm run clean:zombies`) and polls in the background every 30 seconds during test runs.
+
+## 5. Visual Tiling & Window Management
+
+To support headed operational oversight across multi-monitor setups, the engine implements a strict grid-tiling system:
+- **Windows**: Invokes a native C# `resizer.exe` for lightning-fast Win32 API window positioning.
+- **macOS**: Leverages performant AppleScript `whose` queries against System Events to instantly tile windows without CPU blocking.
+
+## 6. Telemetry & Debugging 
+
+The architecture supports native debugging hooks:
+- **Playwright Tracing**: A fully integrated Tracer (toggled via the UI) automatically invokes `context.tracing.start()` across all standalone backends. It collects snapshots, sources, and screenshots, saving `.zip` archives directly to `/reports/traces/` upon session teardown.
+- **Button Readiness & Interaction Telemetry**: Submits are deeply tracked via a `_submitTrigger` DOM property. The engine guarantees a 4000ms interactive threshold check before attempting physical UI fallbacks, ensuring robust performance under high latency.

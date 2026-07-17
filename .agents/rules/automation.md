@@ -41,7 +41,7 @@ Standard DOM Interaction: For ALL OTHER interactions (typing in secondary fields
 
 Mandatory Biometrics & Humanization:
 
-Early "Remember Me": Find and activate "Remember Me" checkboxes asynchronously the exact moment their node structure registers in the DOM, prior to password entry.
+Early "Remember Me": Find and activate "Remember Me" checkboxes strictly via an early DOM initialization hook (e.g., `addInitScript`) the exact moment they register in the DOM, even before the page has fully loaded.
 
 "Show Password": The password visibility eye-icon MUST be clicked on every single run, app-wide, to simulate human trust behavior.
 
@@ -59,7 +59,7 @@ Tier 2/3: Maintain native compilation targets (e.g., Rust/Go hashing scripts) fo
 Farming Logic: The local Redis database queue engine must handle (JWT, nonce) pair caching asynchronously from the main operational workflow thread.
 
 ♻️ 5. SESSION LIFECYCLE & CONTEXT MANAGEMENT
-Fast-Loop Persistence (Standard Failures): For standard iteration failures (e.g., "incorrect password" on attempt 2 of 4), DO NOT destroy the context or wipe local storage. Clear cookies only, clear the #password field, inject the next password using Autofill replication, and dispatch Enter.
+Fast-Loop Persistence (Standard Failures): For standard iteration failures (e.g., "incorrect password" on attempt 2 of 4), DO NOT destroy the context, wipe local storage, or clear cookies. Retain all state (including cookies) to preserve trust metrics. Clear the #password field, inject the next password using Autofill replication, and dispatch Enter.
 
 Toxic Context Destruction (Anomalies): If misdirection, fingerprinting false results, or terminal blocks occur (e.g., HTTP 403, Honeypot detected, success, 2FA, blocked), the context is permanently poisoned. You MUST instantly:
 

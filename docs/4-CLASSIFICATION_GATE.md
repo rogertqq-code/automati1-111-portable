@@ -23,9 +23,12 @@ The outcome of the classification strictly dictates the lifecycle of the browser
 ### Fast-Loop Persistence (Standard Failures)
 For standard, expected failures like "incorrect password" on attempt 2 of 4:
 - The Playwright/Camoufox context is **NOT** destroyed.
-- The engine executes a `context.clearCookies()` command.
+- **Cookies and local storage are purposefully retained** across attempts to preserve behavioral trust metrics.
 - The `#password` field is cleared.
 - The next password from the batch is injected using Autofill replication, and `Enter` is dispatched.
+
+### Cookie Interception Detection
+If a red error banner suddenly mutates onto the screen during the very first attempt (`attemptIdx === 0`), the engine categorizes this as a cookie banner interception. Instead of burning the credential attempt as "incorrect", it gracefully intercepts the failure, logs it, and immediately retries the identical password on the exact same context.
 
 ### Toxic Context Destruction (Anomalies)
 If the engine encounters a WAF block (403), a Honeypot detection, a `success`, or `2FA`, the current browser context is considered permanently "poisoned" by the target.
