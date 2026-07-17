@@ -72,7 +72,7 @@ async function createCloakSession(opts: SessionOpts): Promise<SessionHandle> {
   const cacheProfile = opts.email ? getCacheProfile(opts.email, uaProfile?.chromeMajor ?? 148) : undefined;
   const requestedCacheInjectionState = resolveCacheInjectionState(cacheProfile, opts.enableCacheInjection);
   const recordLocalVideo = shouldRecordLocalVideo(opts);
-  const cleanLocalProfile = shouldUseCleanLocalProfile(opts);
+  const cleanLocalProfile = shouldUseCleanLocalProfile(opts) || opts.enablePlaywrightTracing;
 
   const launchArgs = [
     // WebRTC Leak Protection
@@ -275,6 +275,15 @@ async function createCloakSession(opts: SessionOpts): Promise<SessionHandle> {
       }
       await maybeAddCacheInjectionScript(newCtx, cacheProfile, opts.enableCacheInjection);
 
+      if (opts.enablePlaywrightTracing) {
+        try {
+          await newCtx.tracing.start({ screenshots: true, snapshots: true, sources: true });
+          log.info(`[${sessionId}] Enabled Playwright Tracing for Cloak (Headed)`);
+        } catch (err: unknown) {
+          log.warn(`[${sessionId}] Failed to start trace: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
       const page = newCtx.pages()[0] ?? (await newCtx.newPage());
       const nativeDpr = await page.evaluate(() => window.devicePixelRatio).catch(() => null);
       if (nativeDpr != null && Math.abs(nativeDpr - resolved.deviceScaleFactor) > 0.01) {
@@ -469,6 +478,16 @@ async function createCloakSession(opts: SessionOpts): Promise<SessionHandle> {
       await injectStealthScripts(context!, uaProfile, seed, geoProfile?.timezone, hardwareProfile, "cloak", undefined, opts.captchaServiceUrl);
     }
     await maybeAddCacheInjectionScript(context!, cacheProfile, opts.enableCacheInjection);
+    
+    if (opts.enablePlaywrightTracing) {
+      try {
+        await context!.tracing.start({ screenshots: true, snapshots: true, sources: true });
+        log.info(`[${sessionId}] Enabled Playwright Tracing for Cloak (Headless)`);
+      } catch (err: unknown) {
+        log.warn(`[${sessionId}] Failed to start trace: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+
     if (!recordLocalVideo && !cleanLocalProfile) {
       trackHeadlessContext(userDataDir, context!, requestedCacheInjectionState, currentProxyKey, proxyForwarder);
     }
@@ -505,6 +524,21 @@ async function createCloakSession(opts: SessionOpts): Promise<SessionHandle> {
     close: async () => {
       // Memory hardening: explicitly close all pages before teardown to force GC
       await Promise.all(context!.pages().map(p => p.close().catch(() => {})));
+      
+      if (opts.enablePlaywrightTracing) {
+        try {
+          const fs = await import("fs");
+          const path = await import("path");
+          const recDir = path.join(process.cwd(), "reports", "traces");
+          if (!fs.existsSync(recDir)) fs.mkdirSync(recDir, { recursive: true });
+          const tracePath = path.join(recDir, `cloak-trace-${sessionId}.zip`);
+          await context!.tracing.stop({ path: tracePath });
+          log.info(`[${sessionId}] Playwright Trace saved to ${tracePath}`);
+        } catch (err: unknown) {
+          log.warn(`[${sessionId}] Failed to save trace: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+      
       if (recordLocalVideo || cleanLocalProfile) {
         await context!.close().catch(() => { });
         await proxyForwarder?.close().catch(() => { });

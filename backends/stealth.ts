@@ -248,16 +248,16 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
   } catch (e: unknown) {
     log.error(`[${sessionId}] Context/page creation failed: ${e instanceof Error ? e.message : String(e)}`);
     if (forwarder) await forwarder.close();
-    await browser.close().catch(() => {});
+    if (browser) await browser.close().catch(() => {});
     throw e;
   }
 
   // --- Tracing for Camoufox ---
-  // Replaces the missing native .webm functionality
-  if (opts.recordVideo) {
+  // Replaces the missing native .webm functionality, or enables manual tracing
+  if (opts.recordVideo || opts.enablePlaywrightTracing) {
     try {
-      await context.tracing.start({ screenshots: true, snapshots: true });
-      log.info(`[${sessionId}] Enabled Playwright Tracing for Camoufox (recordVideo requested)`);
+      await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+      log.info(`[${sessionId}] Enabled Playwright Tracing for Camoufox`);
     } catch (err: unknown) {
       log.warn(`[${sessionId}] Failed to enable Playwright Tracing: ${err instanceof Error ? err.message : String(err)}`);
     }
@@ -311,11 +311,11 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
         released = true;
       }
       
-      if (opts.recordVideo) {
+      if (opts.recordVideo || opts.enablePlaywrightTracing) {
         try {
           const fs = await import("fs");
           const path = await import("path");
-          const recDir = path.join(process.cwd(), "recordings");
+          const recDir = path.join(process.cwd(), "reports", "traces");
           if (!fs.existsSync(recDir)) fs.mkdirSync(recDir, { recursive: true });
           const tracePath = path.join(recDir, `stealth-trace-${sessionId}.zip`);
           await context.tracing.stop({ path: tracePath });

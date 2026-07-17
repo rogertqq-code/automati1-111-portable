@@ -193,6 +193,10 @@ export async function createZendriverSession(opts: SessionOpts): Promise<Session
     await import('../src/services/browser-tiler.js').then(m => m.globalTiler.enforceWindowBounds(page, sBounds, undefined, "zendriver-headed"));
   }
 
+  if (opts.enablePlaywrightTracing) {
+    await context.tracing.start({ screenshots: true, snapshots: true, sources: true });
+  }
+
   // ── Aggressive CDP Trace Removal (BEFORE any page loads) ──
   // Zendriver's CDP architecture exposes automation traces. We must remove
   // them at the earliest possible point via Runtime.evaluate on the default
@@ -363,6 +367,21 @@ export async function createZendriverSession(opts: SessionOpts): Promise<Session
       if (slot !== undefined) {
         releaseHeadedSlot(slot);
       }
+      
+      if (opts.enablePlaywrightTracing) {
+        try {
+          const fs = await import("fs");
+          const path = await import("path");
+          const recDir = path.join(process.cwd(), "reports", "traces");
+          if (!fs.existsSync(recDir)) fs.mkdirSync(recDir, { recursive: true });
+          const tracePath = path.join(recDir, `zendriver-trace-${sessionId}.zip`);
+          await context.tracing.stop({ path: tracePath });
+          log.info(`[${sessionId}] Playwright Trace saved to ${tracePath}`);
+        } catch (err: unknown) {
+          log.debug(`[${sessionId}] Failed to save Playwright Trace: ${err instanceof Error ? err.message : String(err)}`);
+        }
+      }
+
       await browser.close().catch(() => {});
       zendriverProcess.kill();
       if (forwarder) await forwarder.close();

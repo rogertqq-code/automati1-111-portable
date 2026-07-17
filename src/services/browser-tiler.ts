@@ -389,19 +389,16 @@ export class BrowserTiler {
           try {
             const script = `
               tell application "System Events"
-                set allProcs to every process whose visible is true
+                set allProcs to application processes whose background only is false
                 repeat with proc in allProcs
                   try
-                    set allWins to every window of proc
-                    repeat with win in allWins
-                      try
-                        if name of win contains "${uniqueTitle}" then
-                          set position of win to {${Math.floor(bounds.x)}, ${Math.floor(bounds.y)}}
-                          set size of win to {${Math.floor(bounds.width)}, ${Math.floor(bounds.height)}}
-                          return "SUCCESS"
-                        end if
-                      end try
-                    end repeat
+                    set allWins to (every window of proc whose name contains "${uniqueTitle}")
+                    if (count of allWins) > 0 then
+                      set win to item 1 of allWins
+                      set position of win to {${Math.floor(bounds.x)}, ${Math.floor(bounds.y)}}
+                      set size of win to {${Math.floor(bounds.width)}, ${Math.floor(bounds.height)}}
+                      return "SUCCESS"
+                    end if
                   end try
                 end repeat
               end tell

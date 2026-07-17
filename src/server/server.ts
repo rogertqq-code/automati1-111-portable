@@ -287,6 +287,7 @@ const LOGIC_TOGGLE_ALLOWLIST = new Set([
   "useHttpCloak",
   "stealthBypassHttpCloak",
   "recordVideo",
+  "enablePlaywrightTracing",
   "parallelSiteTesting",
   "manualCaptchaMode",
   "autoOptimizePerBackend",
@@ -365,6 +366,7 @@ let currentBackend: DashboardBackend = loadedConfig.backend as DashboardBackend;
 let currentEnableCacheInjection = loadedConfig.enableCacheInjection;
 let currentInjectStealthJS = loadedConfig.injectStealthJS;
 let currentRecordVideo: boolean = loadedConfig.recordVideo;
+let currentEnablePlaywrightTracing: boolean = loadedConfig.enablePlaywrightTracing;
 let currentEngineConfig: EngineConfig | null = null;
 // postLoadDelay has been removed for absolute zero-delay instant execution
 let currentEnableVerification: boolean = loadedConfig.enableVerification;
@@ -1405,6 +1407,7 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
             backend: currentBackend,
             enableCacheInjection: currentEnableCacheInjection,
             recordVideo: currentRecordVideo,
+            enablePlaywrightTracing: currentEnablePlaywrightTracing,
             // postLoadDelay has been deprecated
             hasSpiderKey: false,
             hasSpiderLocalKey: false,
@@ -1582,6 +1585,7 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
               splitBackends: currentBackend === "split-local-stealth" ? ["stealth", "cloak-headless"] : undefined,
               enableCacheInjection: currentEnableCacheInjection,
               recordVideo: currentRecordVideo,
+              enablePlaywrightTracing: currentEnablePlaywrightTracing,
               cleanSession: true,
               // postLoadDelay has been deprecated
               enableVerification: currentEnableVerification,
@@ -1781,7 +1785,7 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
             if (msg.data && msg.data.value) {
               currentProxyPool = msg.data.value;
               if (currentEngineConfig) currentEngineConfig.proxyPool = currentProxyPool;
-              broadcast({ type: 'config', data: { config: { concurrency: currentConcurrency, mode: currentInputMode, maxRetries: currentMaxRetries, backend: currentBackend, fpStrategy: currentFpStrategy, proxyPool: currentProxyPool } } });
+              broadcast({ type: 'config', data: { config: { concurrency: currentConcurrency, mode: currentInputMode, maxRetries: currentMaxRetries, backend: currentBackend, fpStrategy: currentFpStrategy, proxyPool: currentProxyPool, enableTracing: currentEnablePlaywrightTracing } } });
             }
             break;
 
@@ -2119,7 +2123,7 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
               return;
             }
             currentFpStrategy = v as typeof currentFpStrategy;
-            broadcast({ type: "config", data: { config: { concurrency: currentConcurrency, mode: currentInputMode, maxRetries: 2, backend: currentBackend, fpStrategy: currentFpStrategy, proxyPool: currentProxyPool } } });
+            broadcast({ type: "config", data: { config: { concurrency: currentConcurrency, mode: currentInputMode, maxRetries: 2, backend: currentBackend, fpStrategy: currentFpStrategy, proxyPool: currentProxyPool, enableTracing: currentEnablePlaywrightTracing } } });
           } break;
 
           case "set-emulate-mobile": {
@@ -2150,6 +2154,30 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
             currentRecordVideo = v;
             if (currentEngineConfig) currentEngineConfig.recordVideo = v;
             broadcast({ type: "record-video", data: { value: currentRecordVideo } });
+            break;
+          }
+
+          case "set-enable-tracing": {
+            const v = msg.data?.value;
+            if (typeof v !== "boolean") {
+              ws.send(JSON.stringify({ type: "error", data: { message: "set-enable-tracing: value must be a boolean" } }));
+              return;
+            }
+            currentEnablePlaywrightTracing = v;
+            if (currentEngineConfig) currentEngineConfig.enablePlaywrightTracing = v;
+            broadcast({ type: "enable-tracing", data: { value: currentEnablePlaywrightTracing } });
+            break;
+          }
+
+          case "set-enable-tracing": {
+            const v = msg.data?.value;
+            if (typeof v !== "boolean") {
+              ws.send(JSON.stringify({ type: "error", data: { message: "set-enable-tracing: value must be a boolean" } }));
+              return;
+            }
+            currentEnablePlaywrightTracing = v;
+            if (currentEngineConfig) currentEngineConfig.enablePlaywrightTracing = v;
+            broadcast({ type: "enable-tracing", data: { value: currentEnablePlaywrightTracing } });
             break;
           }
 
@@ -2579,6 +2607,7 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
                   backend: currentBackend,
                   enableCacheInjection: currentEnableCacheInjection,
                   recordVideo: currentRecordVideo,
+                  enablePlaywrightTracing: currentEnablePlaywrightTracing,
                   // postLoadDelay deprecated
                   hasSpiderKey: false,
                   hasSpiderLocalKey: false,
@@ -2653,6 +2682,7 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
                   backend: currentBackend,
                   enableCacheInjection: currentEnableCacheInjection,
                   recordVideo: currentRecordVideo,
+                  enablePlaywrightTracing: currentEnablePlaywrightTracing,
                   // postLoadDelay deprecated
                   maxRetries: 2,
                   targets: DEFAULT_TARGETS.map((t) => t.name),
@@ -3089,6 +3119,7 @@ function startExtraServers() {
                 spiderLocalApiKey: "",
                 enableCacheInjection: currentEnableCacheInjection,
                 recordVideo: currentRecordVideo,
+                enablePlaywrightTracing: currentEnablePlaywrightTracing,
                 cleanSession: true,
                 // postLoadDelay deprecated
                 enableVerification: currentEnableVerification,

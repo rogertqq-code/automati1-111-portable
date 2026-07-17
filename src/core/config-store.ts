@@ -27,6 +27,7 @@ export interface AppConfig {
   advEmulateMobile: boolean;
   injectStealthJS: boolean;
   recordVideo: boolean;
+  enablePlaywrightTracing: boolean;
   postLoadDelay: number;
   enableVerification: boolean;
   useHttpCloak: boolean;
@@ -61,6 +62,7 @@ const DEFAULT_CONFIG: AppConfig = {
   advEmulateMobile: false,
   injectStealthJS: false,  // Stealth has native evasion — JS injection is for Cloak/Zendriver
   recordVideo: false,  // Stealth headless defaults to no video for max speed
+  enablePlaywrightTracing: false,
   postLoadDelay: 0,   // strict-zero-sleep-polling rule
   enableVerification: true,
   useHttpCloak: true,  // HttpCloak enabled by default for stealth

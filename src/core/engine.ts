@@ -414,6 +414,7 @@ export interface EngineConfig {
   enableCacheInjection?: boolean; // inject deterministic localStorage breadcrumbs via addInitScript; default FALSE (Rule 38: addInitScript hooks add detectable surface)
   postLoadDelay?: number;       // seconds to wait after page load before beginning interactions
   recordVideo?: boolean;        // local Cloak video capture; dashboard-toggleable for live and batch runs
+  enablePlaywrightTracing?: boolean;
   cleanSession?: boolean;       // local Cloak uses a fresh disposable profile; default true to avoid test/session carryover
   enableVerification?: boolean; // AI video verification for double-bad outcomes; default true when API key is set
   flowDebug?: boolean;          // step-by-step verified execution with halted flow on failure
@@ -2458,6 +2459,7 @@ export class AutomationEngine extends EventEmitter {
                   proxyCountry: config.proxyCountry,
                   locale: config.locale,
                   requestMode: config.requestMode,
+                  enablePlaywrightTracing: config.enablePlaywrightTracing,
                   useHttpCloak: bkSettings.useHttpCloak,
                   stealthBypassHttpCloak: bkSettings.stealthBypassHttpCloak,
                   injectStealthJS: bkSettings.injectStealthJS,
@@ -3102,11 +3104,12 @@ export class AutomationEngine extends EventEmitter {
                 this.log("INFO", `  🍪 Soft toxic outcome — clearing cookies, keeping session (slot ${workerSlot})`);
                 try {
                   if (handle.page && !handle.page.isClosed()) {
-                    await handle.page.context().clearCookies();
-                    await handle.page.evaluate(() => {
-                      try { localStorage.clear(); } catch { /* intentional */ }
-                      try { sessionStorage.clear(); } catch { /* intentional */ }
-                    }).catch(() => {});
+                    // Cookie/storage clearing removed as per user request (maintaining state across retries)
+                    // await handle.page.context().clearCookies();
+                    // await handle.page.evaluate(() => {
+                    //   try { localStorage.clear(); } catch { /* intentional */ }
+                    //   try { sessionStorage.clear(); } catch { /* intentional */ }
+                    // }).catch(() => {});
                     // Navigate to about:blank to purge DOM state
                     await handle.page.goto('about:blank', { timeout: 5000 }).catch(() => {});
                   }
@@ -5750,14 +5753,20 @@ export class AutomationEngine extends EventEmitter {
         let skippedByMutation = false;
         if (!fastStatus && !urlMovedAfterSubmit) {
             const mutationResult = await flowStep("Wait For Submit Mutation", "engine.ts:waitForMutation", async () => waitForSubmitMutationResult(page, 2000));
-            if (mutationResult && !mutationResult.errorVaried) {
+            
+            // If the error text didn't change (swallowed), or if it DID change but it's the very first attempt (likely cookie notice intercepting click)
+            const isFirstAttemptCookieIntercept = mutationResult && mutationResult.errorVaried && attemptIdx === 0;
+            const isSubmitSwallowed = mutationResult && !mutationResult.errorVaried;
+
+            if (isSubmitSwallowed || isFirstAttemptCookieIntercept) {
                 const retryCount = mutationRetryCounts.get(attemptIdx) || 0;
                 if (retryCount >= 2) {
                     this.log("WARN", `  ${site.name}: ⚠ Max mutation retries (2) reached — classifying as incorrect`);
                     response = "incorrect";
                 } else {
                     mutationRetryCounts.set(attemptIdx, retryCount + 1);
-                    this.log("WARN", `  ${site.name}: ⚠ Submit swallowed (retry ${retryCount + 1}/2) — resubmitting same password`);
+                    const reason = isFirstAttemptCookieIntercept ? "Error banner on first attempt (likely cookie intercept)" : "Submit swallowed";
+                    this.log("WARN", `  ${site.name}: ⚠ ${reason} (retry ${retryCount + 1}/2) — resubmitting same password`);
                     lastResponse = null;
                     resetNetworkDetection();
                     attemptIdx--; // Resubmit SAME password

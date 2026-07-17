@@ -619,6 +619,21 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
         { waitUntil: 'domcontentloaded', timeout: 1500 }
       ).then(() => ({ type: "nav", verdict: "success" })).catch(() => null);
 
+      // Submit Telemetry: Track what triggers the submit
+      await page.evaluate((sel) => {
+          (window as any)._submitTrigger = 'Unknown';
+          const btn = document.querySelector(sel);
+          if (btn) {
+              btn.addEventListener('click', () => { (window as any)._submitTrigger = 'Button Click'; });
+          }
+          const form = btn?.closest('form') || document.querySelector('form');
+          if (form) {
+              form.addEventListener('submit', () => { 
+                  if ((window as any)._submitTrigger === 'Unknown') (window as any)._submitTrigger = 'Enter Key'; 
+              });
+          }
+      }, selectors.submit).catch(() => {});
+
       // Fire Enter key press
       await pressEnterInPassword(page, selectors.password);
 
@@ -637,6 +652,8 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
 
       if (signal && (signal.type === "post" || signal.type === "nav")) {
           // POST detected or full navigation — these are high-confidence signals
+          const trigger = await page.evaluate(() => (window as any)._submitTrigger).catch(() => 'Unknown');
+          log.info(`[Submit Tracker] Form submission triggered via: ${trigger}`);
           log.debug(`Submit verified via immediate Enter key (signal: ${signal.type}, verdict: ${signal.verdict}).`);
           return { success: signal.verdict === "success", submitMethod: "enter_in_password", networkVerdict: signal.verdict || undefined };
       }
@@ -667,13 +684,34 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
   } catch { /* intentional */ }
 
   // (Show Password fallback was invoked at the STRICT RULE block above)
+
+  // ── BUTTON READINESS CHECK ──
+  // Wait for the submit button to become interactive before falling back to physical clicks
+  try {
+      await page.waitForFunction((sel) => {
+          const btn = document.querySelector(sel) as HTMLElement;
+          if (!btn) return false;
+          const style = window.getComputedStyle(btn);
+          const isVisible = style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+          const isDisabled = (btn as any).disabled || btn.getAttribute('aria-disabled') === 'true' || btn.classList.contains('disabled');
+          return isVisible && !isDisabled;
+      }, selectors.submit, { timeout: 4000 });
+      log.debug(`Submit button is interactive and ready for physical click.`);
+  } catch {
+      log.warn(`Submit button did not become interactive within timeout. Forcing click anyway.`);
+  }
+
   // 5. Fallback Submit
   if (attemptIdx === 0) {
       await pressTripleClickOnSubmit(page, selectors.submit);
+      const trigger = await page.evaluate(() => (window as any)._submitTrigger).catch(() => 'Unknown');
+      log.info(`[Submit Tracker] Form submission triggered via: ${trigger}`);
       return { success: true, submitMethod: "triple_click" };
   } else {
       const submitBox = await page.locator(selectors.submit).boundingBox().catch(() => null);
       await pressClickOnSubmit(page, selectors.submit, submitBox);
+      const trigger = await page.evaluate(() => (window as any)._submitTrigger).catch(() => 'Unknown');
+      log.info(`[Submit Tracker] Form submission triggered via: ${trigger}`);
       return { success: true, submitMethod: "click" };
   }
 }

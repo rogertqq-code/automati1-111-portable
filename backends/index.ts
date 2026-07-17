@@ -461,6 +461,7 @@ export interface SessionOpts {
   liveTest?: boolean;
   enableCacheInjection?: boolean;
   recordVideo?: boolean;
+  enablePlaywrightTracing?: boolean;
   cleanSession?: boolean;
   agentOptions?: Record<string, any>;
   /** Two-letter country code from engine config — accepted here as a pass-through
