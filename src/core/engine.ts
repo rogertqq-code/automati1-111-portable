@@ -3044,6 +3044,19 @@ export class AutomationEngine extends EventEmitter {
                     sStatus!.outcome = "N/A";
                     sStatus!.error = errMsg;
                     this.log("ERR", `  ✗ ${target.name}: ${errMsg.substring(0, 100)}`);
+                    
+                    // Fix Gap 2: Take a point-in-time screenshot on any technical failure for Hermes comparison
+                    try {
+                      if (activePage && !activePage.isClosed()) {
+                        const failDir = path.join(process.cwd(), "data", "hermes_failures");
+                        if (!fs.existsSync(failDir)) fs.mkdirSync(failDir, { recursive: true });
+                        const failPath = path.join(failDir, `${cred.email.replace(/[^a-zA-Z0-9]/g, "_")}_${target.name}_${handle?.backend ?? "unknown"}_${Date.now()}.jpeg`);
+                        await activePage.screenshot({ path: failPath, type: "jpeg", quality: 60 });
+                        this.log("INFO", `  📸 Saved failure reference screenshot for Hermes: ${failPath}`);
+                      }
+                    } catch (e: any) {
+                      // ignore screenshot failures on crashed pages
+                    }
                   }
 
                   flowTracer.recordEvent({
