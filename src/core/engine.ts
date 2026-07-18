@@ -692,6 +692,11 @@ export function classifyLoginResponse(signals: LoginSignals, siteName: string): 
 
   if (signals.hasSuccessSelector) return "success";
 
+  // Fast-path success indicator: "Welcome!" banner (exclamation mark required).
+  // This does NOT mean final success; returning "success" here simply commands the wrapper
+  // to immediately jump to the cashier page to verify.
+  if (/welcome!/i.test(signals.bodyText)) return "success";
+
   // Form-vanished success: only fires when BOTH selectors were configured
   // (caller-side) and both elements are gone. The signal-capture side
   // reports `submitGone = false` whenever submitSel is empty, so this

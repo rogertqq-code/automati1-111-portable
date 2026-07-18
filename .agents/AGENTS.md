@@ -50,6 +50,17 @@ The final verification step (verifying the cashier page load to confirm a succes
 2. **Instant Bounce Listener**: A `framenavigated` listener MUST be attached to instantly detect redirects to `/login` or `/signin`.
 3. **Mutation Quiescence (DOM Settle)**: Before declaring success, the script MUST wait for the DOM to settle by observing `document.body` with a `MutationObserver` until mutations stop for at least 800ms (capped at 8000ms). Arbitrary `page.waitForTimeout()` sleeps are strictly forbidden here.
 
+## Terminal Session End Conditions (ABSOLUTE)
+
+The app should ONLY ever end a session when one of the following four conditions is met:
+
+1. **Success**: You have successfully navigated to the cashier page after detecting a success and the cashier page navigation is confirmed.
+2. **No Account**: The full 4 submit attempts were completed and all were incorrect responses, which confirms that credential does not have an existing account with that target site.
+3. **Permanently Disabled**: A "has been disabled" message is detected, meaning the credential is permanently disabled from that target site. The automation requires no more login attempts. After the other target site with that credential is tested, and unless that other site has a success result, the session cookies/session/cache/ip/fingerprint must be burned and the credential banned from future testing (the only exception for banning is a perm_disabled/temp_disabled split).
+4. **Temporarily Disabled**: A "temporarily disabled" response is detected. The automation requires no more login attempts. The other target site with that credential is still tested, a countdown of exactly 1 hour is started, and the tested passwords of that email are marked as tested or colored red.
+
+*(Note: There are other less common honeypot and misdirection pages that occur from fingerprinting, but they aren't causing the automations to end early right now. Review their details in other documentation if needed.)*
+
 ## Headed Mode & Visual Verification (ABSOLUTE)
 
 1. **Headed vs Headless Contract**: Backends suffixed with `-headed` MUST explicitly set `headless: false` and `liveTest: true`. Bare backend names (e.g., `stealth`, `zendriver`) MUST explicitly default to `headless: true`. There must be no ambiguous `undefined` state for the headless flag.
