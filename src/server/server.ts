@@ -173,6 +173,8 @@ initPermDisabledCsv();
 
 type DashboardBackend = "cloak-headed" | "cloak-headless" | "cloak-headless-nocloak" | "cloak-headed-nocloak" | "split-local-stealth" | "experimental" | "experimental-elimination" | "curl-api" | "golden-benchmark" | "stealth" | "stealth-headed" | "zendriver" | "zendriver-headed" | "rotate-backends" | "rotate-backends-headless" | "stealth-fortress" | "speed-blitz" | "headed-recon" | "darwin";
 const CSRF_TOKEN = randomBytes(32).toString("hex");
+const MOBILE_API_KEY = process.env.MOBILE_API_KEY || randomBytes(16).toString("hex");
+log.info(`MOBILE_API_KEY initialized. Use this key in your iOS App to connect: ${MOBILE_API_KEY}`);
 const WS_WINDOW_MS = 60_000;
 const WS_MAX_CONNECTIONS_PER_WINDOW = 60;
 const wsConnectionAttempts = new Map<string, { count: number; resetAt: number }>();
@@ -491,6 +493,58 @@ function parseMultipartFile(req: express.Request): Promise<Buffer> {
     req.on("error", reject);
   });
 }
+
+// ── Express Middleware for API Security ────────────────────────────────────
+app.use((req, res, next) => {
+  // Allow local connections or requests with the valid mobile API key
+  const ip = req.socket.remoteAddress;
+  const isLocalhost = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+  
+  if (req.path.startsWith("/api/")) {
+    const authHeader = req.headers.authorization;
+    const hasValidApiKey = authHeader === `Bearer ${MOBILE_API_KEY}`;
+    
+    // For /api/upload-csv, we let the route handle CSRF if it's local
+    if (!isLocalhost && !hasValidApiKey && req.path !== "/api/upload-csv") {
+      res.status(403).json({ error: "Unauthorized: Invalid or missing API Key" });
+      return;
+    }
+  }
+  next();
+});
+
+// ── Mobile Optimized Text Paste Endpoint ──────────────────────────────────
+app.post("/api/credentials/text-paste", express.text({ type: '*/*' }), async (req, res) => {
+  try {
+    const rawText = req.body;
+    if (!rawText || typeof rawText !== 'string') {
+      res.status(400).json({ error: "Empty or invalid body" });
+      return;
+    }
+    
+    const credsDir = path.join(process.cwd(), "credentials");
+    if (!fs.existsSync(credsDir)) fs.mkdirSync(credsDir, { recursive: true });
+    const newCsvPath = path.join(credsDir, `mobile_paste_${Date.now()}.csv`);
+    
+    // Format the raw text to CSV (assuming comma separated)
+    let csvContent = rawText;
+    if (!csvContent.toLowerCase().startsWith("email")) {
+      csvContent = "email,password\n" + csvContent;
+    }
+    
+    await fs.promises.writeFile(newCsvPath, csvContent);
+    await importCsv(newCsvPath);
+    
+    const targetNames = DEFAULT_TARGETS.filter(t => t.selectors?.username).map(t => t.name);
+    cachedCredentials = getUntestedCredentials(targetNames);
+    
+    log.info(`Mobile text-paste uploaded — ${cachedCredentials.length} credentials loaded`);
+    res.json({ success: true, queued: cachedCredentials.length });
+  } catch (err: unknown) {
+    log.error("Mobile paste error:", (err instanceof Error ? err.message : String(err)));
+    res.status(500).json({ error: (err instanceof Error ? err.message : String(err)) });
+  }
+});
 
 app.post("/api/upload-csv", async (req, res) => {
   try {
@@ -1396,7 +1450,19 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
     ws.close(1013, "rate limit exceeded");
     return;
   }
-  log.info("Client connected");
+  
+  const isLocalhost = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
+  if (!isLocalhost) {
+    const url = new URL(req.url || "", `http://${req.headers.host}`);
+    const token = url.searchParams.get("token");
+    if (token !== MOBILE_API_KEY) {
+      log.warn(`Unauthorized WebSocket connection attempt from ${ip}`);
+      ws.close(1008, "Unauthorized");
+      return;
+    }
+  }
+  
+  log.info(`Client connected from ${ip}`);
 
   // Send initial state — when a run is active, use the live engine rows;
   // otherwise hydrate from SQLite so the dashboard restores across restarts.
@@ -2822,7 +2888,7 @@ httpServer.on('error', (err: NodeJS.ErrnoException) => {
   process.exit(1);
 });
 
-process.env.VITEST ? null : httpServer.listen(PORT, "127.0.0.1", () => {
+process.env.VITEST ? null : httpServer.listen(PORT, "0.0.0.0", () => {
   if (process.env.SKIP_NPM_CHECK === "1") {
     log.info("Skipping npm-check (SKIP_NPM_CHECK=1)");
   } else {
