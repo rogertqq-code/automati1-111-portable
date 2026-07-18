@@ -19,6 +19,7 @@ import { scanForRequeue } from './batch-requeuer.js';
 import { StrategyEngine } from './strategy-engine.js';
 import { OutcomeTracker } from './outcome-tracker.js';
 import { GoogleGenAI } from '@google/genai';
+import { ResearchOrchestrator } from '../intelligence/research-orchestrator.js';
 
 const log = createLogger('Hermes');
 
@@ -832,7 +833,12 @@ class HermesOrchestrator {
         cleanText = cleanText.trim();
         const patchName = "patch_" + Date.now() + ".js";
         fs.writeFileSync(path.join(this.patchesDir, patchName), cleanText);
-        log.info("✅ [Hermes AI] Successfully generated and hot-swapped new codebase improvement: " + patchName);
+        
+        // Also inject this dynamically as a new research skill
+        const orchestrator = new ResearchOrchestrator({ log: (m) => log.debug(m) });
+        orchestrator.injectHermesSkill(cleanText, "global", "hermes-ai-patch");
+        
+        log.info("✅ [Hermes AI] Successfully generated and injected new codebase skill: " + patchName);
       }
     } catch (e: unknown) {
       log.info("⚠️ [Hermes AI] Self-improvement failed this cycle: " + (e instanceof Error ? e.message : String(e)));

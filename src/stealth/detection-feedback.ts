@@ -13,6 +13,7 @@
 
 import fs from "node:fs";
 import type { RedisCoordinator } from "../services/redis-coordinator.js";
+import { ResearchOrchestrator } from "../intelligence/research-orchestrator.js";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -153,6 +154,19 @@ export class DetectionFeedbackLoop {
         event.vector,
         Math.floor(this.ttlMs / 1000),
       ).catch(() => {});
+    }
+
+    // Trigger AutoResearchClaw to research a fix for this detection vector
+    if (event.target) {
+      try {
+        const orchestrator = new ResearchOrchestrator({ log: (m) => this.log(m) });
+        orchestrator.registerTarget(event.target, [event.vector]);
+        void orchestrator.research(event.target).catch((e) => {
+          this.log(`[feedback] ARC trigger failed: ${e instanceof Error ? e.message : String(e)}`);
+        });
+      } catch (e) {
+        this.log(`[feedback] Failed to instantiate ARC: ${e instanceof Error ? e.message : String(e)}`);
+      }
     }
   }
 
