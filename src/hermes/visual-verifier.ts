@@ -30,7 +30,7 @@ Your goal is to determine if the user is SUCCESSFULLY logged into their account.
 
 Indicators of SUCCESS:
 - You see account balances, deposit/withdrawal buttons, cashier dashboard, or an account menu.
-- You see "Welcome!" or any variation with an exclamation mark (case doesn't matter, but the "!" is required).
+- The URL has successfully navigated away from the login page to a dashboard/lobby.
 
 Indicators of FAILURE / FALSE POSITIVE:
 - The page is still asking for a password or login.

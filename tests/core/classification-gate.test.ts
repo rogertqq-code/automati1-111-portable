@@ -178,26 +178,11 @@ describe("classifyLoginResponse — exhaustiveness", () => {
       expect(result).toBe("success");
     });
 
-    it("'Welcome!' (with exclamation, any case) → success", () => {
-      const result = classifyLoginResponse(
-        makeSignals({ bodyText: "Welcome! You are logged in." }), "joe"
-      );
-      expect(result).toBe("success");
-    });
+    
 
-    it("'WELCOME!' (uppercase with exclamation) → success", () => {
-      const result = classifyLoginResponse(
-        makeSignals({ bodyText: "WELCOME! You are logged in." }), "joe"
-      );
-      expect(result).toBe("success");
-    });
+    
 
-    it("'WELCOME' (no exclamation) does NOT trigger success", () => {
-      const result = classifyLoginResponse(
-        makeSignals({ bodyText: "WELCOME TO OUR SITE" }), "joe"
-      );
-      expect(result).not.toBe("success");
-    });
+    
 
     it("submitGone + passwordPresent=false → success", () => {
       const result = classifyLoginResponse(

@@ -37,9 +37,9 @@ process.on("uncaughtException", (err) => {
 
 // ΓöÇΓöÇ Globals ΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇ
 const JOE_URLS = [
-  "https://www.joefortune.win/login",
-  "https://www.joefortune.com/login",
-  "https://www.joefortune.ooo/login",
+  "https://www.joefortune.zone/login",
+  "https://www.joefortune.zone/login",
+  "https://www.joefortune.zone/login",
 ];
 const JOE_URL = JOE_URLS[0];
 const CASHIER_PATH = "/account/cashier/deposit/cc";
@@ -350,17 +350,13 @@ async function classifyResponse(page: Page): Promise<string> {
     const body = await page.evaluate(() => document.body?.innerText || "").catch(() => "");
     const bodyLower = body.toLowerCase();
 
-    // ── Success: "welcome!" banner (case-insensitive, exclamation REQUIRED).
     //    "welcome" without exclamation is NEVER success. No exceptions. ──
     const hasSuccessBanner = await page.evaluate(() => {
       const alert = document.querySelector('.ol-alert__content');
-      if (alert && /welcome!/i.test(alert.textContent || "")) return true;
       const all = document.body?.innerText || "";
-      return /welcome!/i.test(all);
     }).catch(() => false);
 
     if (hasSuccessBanner) {
-      console.log("[GOLDEN] ✓ Success banner detected: 'welcome!'");
       return "success";
     }
 

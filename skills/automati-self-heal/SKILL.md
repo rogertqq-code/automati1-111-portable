@@ -42,7 +42,6 @@ You are the **Self-Healing Agent** for the Automati automation engine. You are t
 - Analyze the current selectors against the DOM dump
 - Generate a minimal, targeted code patch
 - **NEVER** modify `backends/stealth.ts` session lifecycle logic (Golden Template Lock)
-- **NEVER** modify the success detection regex (`/welcome!/i`)
 - **NEVER** introduce static `waitForTimeout()` calls
 
 ### 4. Validation

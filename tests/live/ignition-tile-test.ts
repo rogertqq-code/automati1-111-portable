@@ -37,13 +37,9 @@ function nukeAllBrowsers(): void {
 }
 
 /**
- * SPA-aware success detector.
- * Joe Fortune uses SPA navigation: on successful login, a "Welcome!" toast
- * banner appears while the URL may still be /login for a brief period.
+ * SPA-aware success detector. * banner appears while the URL may still be /login for a brief period.
  * This function polls for EITHER signal:
- *   Signal A: URL navigates away from /login
- *   Signal B: "Welcome!" success banner appears in the DOM
- */
+ *   Signal A: URL navigates away from /login */
 async function waitForLoginSuccess(page: Page, backend: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   
@@ -53,19 +49,10 @@ async function waitForLoginSuccess(page: Page, backend: string, timeoutMs: numbe
     if (!currentUrl.includes("/login")) {
       console.log(`[${backend}] ✅ Success: URL navigated to ${page.url()}`);
       return;
-    }
-    
-    // Signal B: "welcome!" banner (case-insensitive, exclamation REQUIRED).
-    // "welcome" without exclamation is NEVER success. No exceptions.
-    const hasSuccessBanner = await page.evaluate(() => {
-      const alert = document.querySelector('.ol-alert__content');
-      if (alert && /welcome!/i.test(alert.textContent || "")) return true;
-      const all = document.body?.innerText || "";
-      return /welcome!/i.test(all);
-    }).catch(() => false);
+    }    const hasSuccessBanner = await page.evaluate(() => {
+      const alert = document.querySelector('.ol-alert__content');      const all = document.body?.innerText || "";    }).catch(() => false);
     
     if (hasSuccessBanner) {
-      console.log(`[${backend}] ✅ Success: "welcome!" banner detected`);
       return;
     }
     

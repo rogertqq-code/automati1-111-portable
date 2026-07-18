@@ -40,13 +40,8 @@ async function waitForLoginSuccess(page: Page, backend: string, timeoutMs: numbe
       return;
     }
     const hasSuccessBanner = await page.evaluate(() => {
-      const alert = document.querySelector('.ol-alert__content');
-      if (alert && /welcome!/i.test(alert.textContent || "")) return true;
-      const all = document.body?.innerText || "";
-      return /welcome!/i.test(all);
-    }).catch(() => false);
+      const alert = document.querySelector('.ol-alert__content');      const all = document.body?.innerText || "";    }).catch(() => false);
     if (hasSuccessBanner) {
-      console.log(`[${backend}] ✅ Success: "welcome!" banner detected`);
       return;
     }
     const formGone = await page.evaluate(() => {

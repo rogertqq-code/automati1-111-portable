@@ -691,10 +691,6 @@ export function classifyLoginResponse(signals: LoginSignals, siteName: string): 
   }
 
   if (signals.hasSuccessSelector) return "success";
-  
-  // STRICT RULE: "welcome!" (case-insensitive, exclamation REQUIRED) is success.
-  // "welcome" without exclamation is NEVER success. No exceptions.
-  if (/welcome!/i.test(signals.bodyText)) return "success";
 
   // Form-vanished success: only fires when BOTH selectors were configured
   // (caller-side) and both elements are gone. The signal-capture side
@@ -4139,8 +4135,6 @@ export class AutomationEngine extends EventEmitter {
           } else {
             await page.locator(submitSelector).click({ force: true, timeout: 500 }).catch(() => {});
           }
-
-          // Wait again up to 10s for success/Welcome banner
           for (let i = 0; i < 10; i++) {
             await this.sleep(1000);
             if (page.isClosed()) break;

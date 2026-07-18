@@ -4,7 +4,7 @@ console.log(`\n======================================================`);
 console.log(`🤖 [GoldenBaseline] Starting Golden Joe Baseline Check (Single Run)`);
 console.log(`======================================================\n`);
 
-const child = spawn('npx', ['tsx', 'run-flow-debug.ts'], {
+const child = spawn('npx', ['tsx', 'tests/live/run-flow-debug.ts'], {
     stdio: 'inherit',
     shell: process.platform === 'win32',
     env: {

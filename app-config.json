@@ -1,6 +1,6 @@
 {
   "backend": "stealth",
-  "concurrency": 5,
+  "concurrency": 1,
   "inputMode": "instant",
   "allowHumanTyping": false,
   "alwaysClickRememberMe": true,
@@ -9,7 +9,7 @@
   "fpStrategy": "none",
   "parallelSiteTesting": false,
   "ignitionVerifBypass": true,
-  "rotateOnFingerprint": false,
+  "rotateOnFingerprint": true,
   "burnOnlyOnPermDisabled": true,
   "mutateOnRetry": true,
   "recycleSessionOnIncorrect": false,

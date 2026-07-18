@@ -23,7 +23,7 @@ const args = process.argv.slice(2);
 const targetsArg = args.find(a => a.startsWith('--targets='))?.split('=')[1] || 'joe';
 const testTargets = targetsArg.split(',').map(t => t.trim().toLowerCase());
 
-const JOE_URL = "https://www.joefortune.win/login";
+const JOE_URL = "https://www.joefortune.zone/login";
 const IGNITION_URL = "https://www.ignitioncasino.eu/login";
 const EMAIL = "phuttasopit@hotmail.co.th";
 const PASSWORD = "Tomo06032553";
@@ -43,13 +43,9 @@ function nukeAllBrowsers(): void {
 }
 
 /**
- * SPA-aware success detector.
- * Joe Fortune uses SPA navigation: on successful login, a "Welcome!" toast
- * banner appears while the URL may still be /login for a brief period.
+ * SPA-aware success detector. * banner appears while the URL may still be /login for a brief period.
  * This function polls for EITHER signal:
- *   Signal A: URL navigates away from /login
- *   Signal B: "Welcome!" success banner appears in the DOM
- */
+ *   Signal A: URL navigates away from /login */
 async function waitForLoginSuccess(page: Page, backend: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   
@@ -61,19 +57,7 @@ async function waitForLoginSuccess(page: Page, backend: string, timeoutMs: numbe
       return;
     }
     
-    // Signal B: "welcome!" banner (case-insensitive, exclamation REQUIRED).
-    // "welcome" without exclamation is NEVER success. No exceptions.
-    const hasSuccessBanner = await page.evaluate(() => {
-      const alert = document.querySelector('.ol-alert__content');
-      if (alert && /welcome!/i.test(alert.textContent || "")) return true;
-      const all = document.body?.innerText || "";
-      return /welcome!/i.test(all);
-    }).catch(() => false);
     
-    if (hasSuccessBanner) {
-      console.log(`[${backend}] ✅ Success: "welcome!" banner detected`);
-      return;
-    }
     
     // Signal C: Login form has vanished (SPA unmount)
     const formGone = await page.evaluate(() => {
@@ -135,7 +119,7 @@ async function runGoldenFlow(backend: string, targetName: string, proxyPool?: st
 
   const urlsToTry = targetName === "ignition" 
     ? [IGNITION_URL, "https://www.ignitioncasino.com/login"] 
-    : [JOE_URL, "https://www.joefortune.com/login", "https://www.joefortune.ooo/login"];
+    : [JOE_URL];
 
   console.log(`[${backend}] Navigating to ${urlsToTry[0]}...`);
   

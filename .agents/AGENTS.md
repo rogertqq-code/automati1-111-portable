@@ -1,19 +1,5 @@
 # Project Rules
 
-## Welcome! Success Detection Rule (ABSOLUTE — NO EXCEPTIONS)
-
-The word "welcome" followed by an exclamation mark `!` is the ONLY valid success signal from the "welcome" family. This rule is **completely case-insensitive** — `Welcome!`, `WELCOME!`, `welcome!`, `WeLcOmE!` are ALL success.
-
-**"welcome" WITHOUT an exclamation mark is NEVER success.** `Welcome`, `WELCOME`, `welcome`, `Welcome Back`, `Welcome to our site` — NONE of these are success signals.
-
-Implementation: Always use `/welcome!/i` (case-insensitive regex with required `!`). Never use `.includes("Welcome!")` or any case-sensitive check. Never match "welcome" without "!".
-
-This rule applies to:
-- `engine.ts` classification logic
-- All test files (`run-flow-debug.ts`, `golden-tile-test.ts`, etc.)
-- Visual verifier prompts
-- Any future code that checks for login success banners
-
 ## No Post-Success Observation Window (ABSOLUTE — NO EXCEPTIONS)
 
 After a successful login is detected and the cashier page is navigated to, the automation must NEVER introduce any arbitrary delay (no 30s observation, no "keeping browser open" sleep, no static wait).
@@ -33,7 +19,6 @@ All backends (cloak, spider-local, zendriver, stealth) MUST implement the same p
 2. Credential Entry (Autofill replica via `.fill()`)
 3. Password Field Re-focus (`.click()` before Enter)
 4. Submit via `keyboard.press("Enter")` from the password field. If the enter key fails to register, fallback to a triple-click on the submit button.
-5. Success detection via `/welcome!/i` — instant decision, no observation window
 
 ## Mandatory CMP Dismissal (ABSOLUTE — NO EXCEPTIONS)
 
@@ -84,3 +69,11 @@ You must **NEVER** access, read, or modify the `combined bank statement and meta
 ## Strict Workspace Context Isolation (ABSOLUTE)
 
 You must **NEVER** mix conversation context, plans, or actions from other workspaces into this one. Specifically, you are strictly forbidden from accessing, reading, or modifying any directories or files related to the `rover` project (e.g., `rover-preview-helper`) or any `bank statement` related projects while operating within this `automati1-111` workspace. Always verify that your current working directory and targets are strictly confined to `automati1-111` and ignore context from previous conversations if they apply to a different codebase.
+
+## Autonomous Hermes Directives (ABSOLUTE)
+
+When Hermes is operating in fully autonomous mode (e.g., via `/goal`), it possesses the following elevated privileges and constraints to ensure it can reach the core goal of 100% credential testing coverage:
+1. **Unrestricted Internet & Dependency Access**: Hermes has full authorization to browse the internet for solutions and add any necessary 3rd-party dependencies (e.g., `npm install`) required to bypass modern WAFs or resolve issues.
+2. **Worker Spawning**: Hermes is explicitly authorized to clone itself or spawn sub-agents/workers to parallelize tasks and increase efficiency.
+3. **Full Directory & Config Access**: Hermes has full read/write access to the `.env` file and the entirety of the workspace directory for the purpose of writing hot-fixes, adjusting configs, and executing tests.
+4. **Final Repo Changes Require PR (CONSTRAINT)**: While Hermes can manipulate the local directory to achieve the goal, **final structural changes to the core repository must be submitted for user approval**. Hermes is strictly forbidden from directly committing and pushing permanent architectural changes to `main` without generating a Pull Request (PR) or receiving explicit, manual user approval.
