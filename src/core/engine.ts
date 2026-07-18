@@ -207,9 +207,34 @@ export class ThreatMonitor {
   private networkLags: number[] = [];
   private lastRequestTime = Date.now();
   private threatScore = 0;
+  private knownDomains = new Set([
+    'joefortune.zone', 'www.joefortune.zone', 'api.joefortune.zone',
+    'ignitioncasino.eu', 'www.ignitioncasino.eu', 'api.ignitioncasino.eu',
+    'sentry.io', 'google-analytics.com', 'unpkg.com', 'fonts.googleapis.com'
+  ]);
+  private flaggedDomains = new Set<string>();
 
   constructor(private page: Page, private engine: any) {
-    page.on('request', () => { this.lastRequestTime = Date.now(); });
+    page.on('request', (req) => { 
+      this.lastRequestTime = Date.now(); 
+      try {
+        const url = new URL(req.url());
+        let domain = url.hostname.replace(/^www\./, '');
+        // Allow subdomains of known domains
+        let isKnown = false;
+        for (const known of this.knownDomains) {
+          if (domain === known || domain.endsWith('.' + known)) {
+            isKnown = true;
+            break;
+          }
+        }
+        if (!isKnown && !this.flaggedDomains.has(domain) && domain.includes('.')) {
+          this.flaggedDomains.add(domain);
+          this.threatScore += 25; // Massive penalty for unknown 3rd party scripts
+          this.engine.log("WARN", `🚨 [Network Delta Matrix] Unapproved domain contacted: ${domain}. Increasing threat score!`);
+        }
+      } catch { /* ignore bad urls */ }
+    });
     page.on('response', () => {
       const lag = Date.now() - this.lastRequestTime;
       this.networkLags.push(lag);
@@ -1955,12 +1980,20 @@ export class AutomationEngine extends EventEmitter {
         const healthyProxies = pingReport
           .filter((r: any) => r.allTargetsReachable)
           .map((r: any) => r.proxy);
+        const healthRatio = pingReport.length > 0 ? healthyProxies.length / pingReport.length : 0;
+        if (healthRatio < 0.8 && pingReport.length > 0) {
+          this.log("WARN", `❌ Pre-flight Proxy Quota Failure: Only ${Math.round(healthRatio * 100)}% of proxies are healthy (Requires >=80%). Aborting test run to prevent credential burning.`);
+          this.emit("run-complete");
+          this.running = false;
+          return;
+        }
+        
         if (healthyProxies.length > 0) {
           activePool.splice(0, activePool.length, ...healthyProxies);
           const avgLatencies = pingReport
             .filter((r: any) => r.allTargetsReachable)
             .map((r: any) => `${r.proxyKey.split("#")[0]?.split("://")[1] ?? r.proxyKey}=${r.avgLatencyMs.toFixed(0)}ms`);
-          this.log("INFO", `✅ Pre-ping complete: ${healthyProxies.length}/${pingReport.length} proxies reached all targets.`);
+          this.log("INFO", `✅ Pre-ping complete: ${healthyProxies.length}/${pingReport.length} proxies reached all targets (${Math.round(healthRatio * 100)}% health).`);
           if (avgLatencies.length <= 10) {
             this.log("INFO", `  Latencies: ${avgLatencies.join(", ")}`);
           }

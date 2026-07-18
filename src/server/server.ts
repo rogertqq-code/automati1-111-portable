@@ -2417,6 +2417,12 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
             break;
           }
 
+          case "hermes-command": {
+            log.info(`[UI] Forwarding hermes-command to broadcast: ${JSON.stringify(msg.data)}`);
+            broadcast(msg);
+            break;
+          }
+
           case "set-parking": {
             const enabled = msg.data?.enabled === true;
             // sessionParkingEnabled removed (unused)

@@ -13,13 +13,14 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import WebSocket from 'ws';
-import { exec } from 'node:child_process';
+import { exec, spawn } from 'node:child_process';
 import { createLogger } from '../core/logger.js';
 import { scanForRequeue } from './batch-requeuer.js';
 import { StrategyEngine } from './strategy-engine.js';
 import { OutcomeTracker } from './outcome-tracker.js';
 import { GoogleGenAI } from '@google/genai';
 import { ResearchOrchestrator } from '../intelligence/research-orchestrator.js';
+import { OpsOrchestrator } from './ops-orchestrator.js';
 
 const log = createLogger('Hermes');
 
@@ -35,6 +36,7 @@ class HermesOrchestrator {
   geminiApiKey: string | undefined;
   strategyEngine: StrategyEngine;
   outcomeTracker: OutcomeTracker;
+  opsOrchestrator: OpsOrchestrator;
   currentBackend: string;
   currentConcurrency: number;
   stats: {
@@ -57,6 +59,7 @@ class HermesOrchestrator {
   loginFlowsModel: Map<string, { path: Array<{ url: string; domHint: string; timestamp: number }> }>; // Tracks state transitions for AI synthesis
   timelineMatrices: Map<string, { runs: Array<{ matrix: unknown; fillTime: number; currentTimings: unknown; timestamp: number }> }>; // Aggregated Timeline Matrices
   patchesDir: string;
+  coreGoal: string;
   _lastJitterTime: number;
 
   constructor(repoRoot = process.cwd()) {
@@ -71,6 +74,11 @@ class HermesOrchestrator {
     this.aiImprovementTimer = null;
     this.geminiApiKey = process.env.GEMINI_API_KEY;
     this.strategyEngine = new StrategyEngine();
+    this.opsOrchestrator = new OpsOrchestrator({
+      onSkillComplete: (skill, success, output) => {
+        this.recordOpsSkillOutcome(skill, success, output);
+      }
+    });
     this.outcomeTracker = new OutcomeTracker({
       onAlert: async (alert) => {
         log.warn(`🚨 Outcome Alert triggered: ${alert.type} in window ${alert.window} (Rate: ${alert.rate}%)`);
@@ -93,6 +101,7 @@ class HermesOrchestrator {
     // Engine State
     this.currentBackend = 'cloak-headless';
     this.currentConcurrency = 5;
+    this.coreGoal = "Ensure that all queued credentials are tested until and results marked accurately, and all the while the apps efficiency and backends are rotated when fingerprinted, and code is fixed when broken, and zombie windows are killed, and hermes intelligence and skills are increasing and adding always, and his understanding and reasoning of the app until the point there is no credentials left to test. Hermes is to follow instructions from the app websocket and also report issues when needing clarification. Hermes is to be seeking to always add and refine skills, and rollback changes if regression is detected, and refine and tinker until it has 100% coverage of the orchestration.";
     
     // Rolling Analytics
     this.stats = {
@@ -144,10 +153,12 @@ class HermesOrchestrator {
         log.info(`🧠 Loaded memory: ${mem.totalCredentialsProcessed || 0} lifetime credentials processed.`);
         if (mem.lastKnownBackend) this.currentBackend = mem.lastKnownBackend;
         if (mem.lastKnownConcurrency) this.currentConcurrency = mem.lastKnownConcurrency;
+        if (mem.coreGoal) this.coreGoal = mem.coreGoal;
         if (mem.failurePatterns) {
           this.failurePatterns = new Map(Object.entries(mem.failurePatterns));
           log.info(`🧠 Loaded ${this.failurePatterns.size} historical failure patterns.`);
         }
+        if (mem.opsSkillOutcomes) this.opsSkillOutcomes = mem.opsSkillOutcomes;
       }
     } catch(e) {
       log.info('🧠 Starting with fresh memory.');
@@ -164,8 +175,25 @@ class HermesOrchestrator {
       mem.lastKnownConcurrency = this.currentConcurrency;
       mem.failurePatterns = Object.fromEntries(this.failurePatterns);
       mem.timelineMatrices = Object.fromEntries(this.timelineMatrices);
+      mem.opsSkillOutcomes = this.opsSkillOutcomes;
+      mem.coreGoal = this.coreGoal;
       fs.writeFileSync(this.memoryPath, JSON.stringify(mem, null, 2));
     } catch { /* intentional */ }
+  }
+
+  private opsSkillOutcomes: any[] = [];
+
+  private recordOpsSkillOutcome(skill: any, success: boolean, output: string) {
+    this.opsSkillOutcomes.push({
+      skillId: skill.id,
+      trigger: skill.triggerCondition,
+      success,
+      output: output.substring(0, 500) // Keep it brief for the AI prompt
+    });
+    // Keep only the last 10 outcomes to avoid blowing up the context window
+    if (this.opsSkillOutcomes.length > 10) {
+      this.opsSkillOutcomes.shift();
+    }
   }
 
   connect() {
@@ -243,6 +271,21 @@ class HermesOrchestrator {
       mutations.push(data);
       if (mutations.length > 50) mutations.shift();
       this.saveMemory();
+    }
+    if (msg.type === 'hermes-command') {
+      const action = msg.data?.action;
+      log.info(`[Hermes] Received remote command from iOS/Dashboard: ${action}`);
+      if (action === 'set_goal') {
+        this.coreGoal = msg.data.goal;
+        log.info(`🎯 [Hermes Core Goal Updated]: ${this.coreGoal}`);
+        this.saveMemory();
+      } else if (action === 'force_cycle') {
+        log.info(`⚡ [Hermes] Forced AI optimization cycle triggered.`);
+        void this.selfImprovementLoop();
+      } else if (action === 'inject_ops_skill' && msg.data.script) {
+        log.info(`🛠️ [Hermes] Remote injected OpsSkill received!`);
+        this.opsOrchestrator.registerOpsSkill(msg.data.script, "remote-injected-immediate");
+      }
     }
     
     if (msg.type === 'telemetry_matrix') {
@@ -781,8 +824,20 @@ class HermesOrchestrator {
       }
     }
 
-    if (!failPatterns && !flowContext && !matrixContext && !heatmapContext) {
-      log.info("🤖 [Hermes AI] No patterns detected. Sleeping.");
+    // 5. Server Telemetry & Ops Outcomes
+    const mem = process.memoryUsage();
+    const memMb = Math.round(mem.rss / 1024 / 1024);
+    let telemetryContext = `\\n\\nServer Telemetry:\\nMemory RSS: ${memMb}MB (Threshold > 2000MB implies leak)\\nApp Uptime: ${Math.round(process.uptime() / 60)} minutes`;
+    
+    if (this.opsSkillOutcomes.length > 0) {
+      telemetryContext += `\\n\\nRecent OpsSkill Execution Outcomes (Learn from these):\\n`;
+      for (const outcome of this.opsSkillOutcomes) {
+        telemetryContext += `Skill ${outcome.skillId} (Trigger: ${outcome.trigger}) - Success: ${outcome.success} - Output: ${outcome.output}\\n`;
+      }
+    }
+
+    if (!failPatterns && !flowContext && !matrixContext && !heatmapContext && memMb < 1500) {
+      log.info("🤖 [Hermes AI] No patterns detected and system healthy. Sleeping.");
       return;
     }
 
@@ -793,11 +848,13 @@ class HermesOrchestrator {
       }
       
       const ai = new GoogleGenAI({ apiKey: this.geminiApiKey });
-      const promptText = "You are the Hermes AI Orchestrator running Gemini 2.5 Flash engine. Your goal is to optimize the automation pipeline."
+      const promptText = `You are the Hermes AI Orchestrator running Gemini 2.5 Flash engine.\n\nYOUR CORE GOAL (Highest Priority):\n"${this.coreGoal}"\n\nYour job is to optimize the automation pipeline and maintain server health.`
         + "\\n\\nRecent Failures: " + failPatterns + flowContext 
-        + matrixContext + heatmapContext
-        + "\\n\\nIf you see optimization opportunities in the Timeline Matrices (e.g. elements are visible much faster than the current KEYSTROKE_DELAY_FAST or POST_LOAD_DELAY settings expect), output ONLY a JSON object representing micro-timing adjustments (e.g. {\"type\": \"set-timing\", \"key\": \"KEYSTROKE_DELAY_FAST\", \"value\": 50})."
-        + "\\nOtherwise, if there are failures, generate ONLY a raw Javascript snippet (no markdown, no backticks) that can be injected via Playwright page.evaluate() to dismiss blocking overlays. DO NOT output both JSON and JS. Output one or the other.";
+        + matrixContext + heatmapContext + telemetryContext
+        + "\\n\\nOPTION 1 - OpsSkill (Server Maintenance): If you detect system degradation (like memory leaks > 2GB or proxy exhaustion), output ONLY a JSON object: {\"type\": \"ops-skill\", \"script\": \"// valid node.js code to fix the issue\"}."
+        + "\\nOPTION 2 - Timing Tuning: If you see optimization opportunities in Timeline Matrices, output ONLY a JSON object: {\"type\": \"set-timing\", \"key\": \"KEYSTROKE_DELAY_FAST\", \"value\": 50}."
+        + "\\nOPTION 3 - JS Patch: Otherwise, if there are DOM failures, generate ONLY a raw Javascript snippet (no markdown) to be injected via page.evaluate()."
+        + "\\nDO NOT output both JSON and JS. Choose ONE optimization strategy based on the most critical current issue aligned with your Core Goal.";
       
       const response = await ai.models.generateContent({
         model: 'gemini-2.5-flash',
@@ -817,6 +874,9 @@ class HermesOrchestrator {
               this.timings[parsed.key as keyof typeof this.timings] = parsed.value;
               this.sendCommand('set-timing', { key: parsed.key, value: parsed.value });
               log.info(`⚡ [Hermes Matrix AI] Dynamically optimized ${parsed.key} to ${parsed.value}ms based on DOM timeline!`);
+            } else if (parsed.type === "ops-skill" && parsed.script) {
+              log.info(`🛠️ [Hermes Ops] Generated Server Maintenance Skill!`);
+              this.opsOrchestrator.registerOpsSkill(parsed.script, "hermes-ai-generated-immediate");
             }
           } catch(e) {
             log.info("⚠️ [Hermes AI] Failed to parse JSON micro-optimization.");

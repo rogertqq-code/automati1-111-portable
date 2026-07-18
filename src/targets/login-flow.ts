@@ -895,9 +895,23 @@ export async function setupSubmitMutationObserver(page: Page, submitSel: string,
         }
     });
     
+    const observeNodeAndShadows = (node: Node) => {
+        formObserver.observe(node, { childList: true, subtree: true, characterData: true });
+        if ((node as Element).shadowRoot) {
+            observeNodeAndShadows((node as Element).shadowRoot as unknown as Node);
+        }
+        const walker = document.createTreeWalker(node, NodeFilter.SHOW_ELEMENT);
+        let child = walker.nextNode();
+        while (child) {
+            if ((child as Element).shadowRoot) {
+                observeNodeAndShadows((child as Element).shadowRoot as unknown as Node);
+            }
+            child = walker.nextNode();
+        }
+    };
+    
     const formArea = document.querySelector(eSel)?.closest('form') || document.body;
-    formObserver.observe(formArea, { childList: true, subtree: true, characterData: true });
-
+    observeNodeAndShadows(formArea);
     (window as unknown as AutomatiWindow).__automatiCleanupObservers = () => {
        observer.disconnect();
        formObserver.disconnect();
