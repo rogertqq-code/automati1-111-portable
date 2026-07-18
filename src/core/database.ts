@@ -297,6 +297,18 @@ export function initDB() {
     `);
   }
 
+  // Fix Gap 1: Orphaned State Deadlocks
+  // If the server crashed while credentials were in 'testing' state, reset them to 'queued' so they aren't lost forever
+  try {
+    const resetStmt = db.prepare(`UPDATE credential_status SET outcome = 'queued' WHERE outcome = 'testing'`);
+    const result = resetStmt.run();
+    if (result.changes > 0) {
+      log.info(`Reset ${result.changes} orphaned 'testing' credentials back to 'queued'`);
+    }
+  } catch (e: any) {
+    log.error(`Failed to reset orphaned testing states: ${e.message}`);
+  }
+
   log.info(`Database initialized (WAL mode, ${countCredentials()} credentials, ${countTestRuns()} test runs)`);
 
   pruneOldData();

@@ -66,6 +66,7 @@ import { DynamicTimings } from "./timings.js";
 import { createLogger } from "./logger.js";
 import { flowTracer } from "../services/flow-tracer.js";
 import { FlowScreenshotter } from "../services/flow-screenshotter.js";
+import { TimelineRecorder } from "../services/timeline-recorder.js";
 import { recordSession } from "./session-telemetry.js";
 import { analyzeInitialResponse, analyzePageResources } from "../intelligence/block-predictor.js";
 import { injectDualClassifier } from "../intelligence/dom-classifier.js";
@@ -103,11 +104,36 @@ export interface CredentialFieldDriver {
 
 async function safeCloseSession(handle: any) {
   let timer: NodeJS.Timeout;
+  let browserPid: number | undefined;
+
+  // Extract PID for zombie killer
+  try {
+    if (handle.page && typeof handle.page.context === 'function') {
+      const browser = handle.page.context().browser();
+      if (browser) {
+        browserPid = browser.process()?.pid;
+      }
+    }
+  } catch (e) {
+    // Ignore extraction errors
+  }
+
   await Promise.race([
     handle.close(),
     new Promise(r => { timer = setTimeout(r, 3000); })
   ]).catch(() => {});
   clearTimeout(timer!);
+
+  // Fix Gap 4: Zombie Browser Processes
+  // Force kill the specific browser process to prevent memory leaks over days of execution
+  if (browserPid) {
+    try {
+      process.kill(browserPid, 'SIGKILL');
+    } catch (e) {
+      // Process already gracefully exited
+    }
+  }
+
   if (global.gc) {
     try { global.gc(); } catch { /* intentional */ }
   }
@@ -3110,7 +3136,33 @@ export class AutomationEngine extends EventEmitter {
                   if (p.isClosed() && handle.backend !== "spider-cloud") {
                     p = await handle.page.context().newPage();
                   }
-                  await runTarget(target, p, sessionReused);
+                  
+                  let timelineRecorder: TimelineRecorder | null = null;
+                  if (p && handle.backend !== "spider-cloud" && handle.backend !== "curl-api") {
+                    timelineRecorder = new TimelineRecorder(p, cred.email, target.name, effectiveBackend as string);
+                    timelineRecorder.start();
+                  }
+
+                  // Fix Gap 3: The Unclosed Hermes Loop
+                  // If Hermes has generated a dynamic bypass hot-fix for this specific target/backend, inject it now
+                  try {
+                    const hotfixPath = path.join(process.cwd(), "data", "hermes_hotfixes", `${target.name}_${effectiveBackend}.js`);
+                    if (fs.existsSync(hotfixPath)) {
+                      this.log("INFO", `  🧠 Hermes AI Hot-Fix found for ${target.name} (${effectiveBackend}). Injecting bypass script...`);
+                      const hotfixScript = fs.readFileSync(hotfixPath, "utf-8");
+                      await p.addInitScript(hotfixScript);
+                    }
+                  } catch (e: any) {
+                    this.log("WARN", `  Failed to apply Hermes hot-fix: ${e.message}`);
+                  }
+
+                  try {
+                    await runTarget(target, p, sessionReused);
+                  } finally {
+                    if (timelineRecorder) {
+                      timelineRecorder.stop();
+                    }
+                  }
                 }
               }
 
