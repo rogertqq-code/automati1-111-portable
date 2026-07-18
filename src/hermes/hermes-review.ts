@@ -18,7 +18,7 @@ import { createLogger } from '../core/logger.js';
 import { scanForRequeue } from './batch-requeuer.js';
 import { StrategyEngine } from './strategy-engine.js';
 import { OutcomeTracker } from './outcome-tracker.js';
-import { GoogleGenAI } from '@google/genai';
+// Removed GoogleGenAI import
 import { ResearchOrchestrator } from '../intelligence/research-orchestrator.js';
 import { OpsOrchestrator } from './ops-orchestrator.js';
 
@@ -33,7 +33,7 @@ class HermesOrchestrator {
   reconnectTimer: ReturnType<typeof setTimeout> | null;
   pollerTimer: ReturnType<typeof setInterval> | null;
   aiImprovementTimer: ReturnType<typeof setInterval> | null;
-  geminiApiKey: string | undefined;
+  openRouterApiKey: string | undefined;
   strategyEngine: StrategyEngine;
   outcomeTracker: OutcomeTracker;
   opsOrchestrator: OpsOrchestrator;
@@ -72,7 +72,7 @@ class HermesOrchestrator {
     this.reconnectTimer = null;
     this.pollerTimer = null;
     this.aiImprovementTimer = null;
-    this.geminiApiKey = process.env.GEMINI_API_KEY;
+    this.openRouterApiKey = process.env.OPENROUTER_API_KEY;
     this.strategyEngine = new StrategyEngine();
     this.opsOrchestrator = new OpsOrchestrator({
       onSkillComplete: (skill, success, output) => {
@@ -213,7 +213,7 @@ class HermesOrchestrator {
       }
       
       // Start 10-minute AI self-improvement loop
-      if (!this.aiImprovementTimer && this.geminiApiKey) {
+      if (!this.aiImprovementTimer && this.openRouterApiKey) {
         log.info("🤖 AI Self-Improvement Loop Activated. Hermes will auto-generate patches every 10 minutes.");
         this.aiImprovementTimer = setInterval(() => this.selfImprovementLoop(), 10 * 60 * 1000);
         // Start immediately as well
@@ -842,13 +842,12 @@ class HermesOrchestrator {
     }
 
     try {
-      if (!this.geminiApiKey) {
-          log.warn("Gemini API Key is not set, skipping AI self-improvement.");
+      if (!this.openRouterApiKey) {
+          log.warn("OPENROUTER_API_KEY is not set, skipping AI self-improvement.");
           return;
       }
       
-      const ai = new GoogleGenAI({ apiKey: this.geminiApiKey });
-      const promptText = `You are the Hermes AI Orchestrator running Gemini 2.5 Flash engine.\n\nYOUR CORE GOAL (Highest Priority):\n"${this.coreGoal}"\n\nYour job is to optimize the automation pipeline and maintain server health.`
+      const promptText = `You are the Hermes AI Orchestrator running Command R+ engine.\n\nYOUR CORE GOAL (Highest Priority):\n"${this.coreGoal}"\n\nYour job is to optimize the automation pipeline and maintain server health.`
         + "\\n\\nRecent Failures: " + failPatterns + flowContext 
         + matrixContext + heatmapContext + telemetryContext
         + "\\n\\nOPTION 1 - OpsSkill (Server Maintenance): If you detect system degradation (like memory leaks > 2GB or proxy exhaustion), output ONLY a JSON object: {\"type\": \"ops-skill\", \"script\": \"// valid node.js code to fix the issue\"}."
@@ -856,12 +855,20 @@ class HermesOrchestrator {
         + "\\nOPTION 3 - JS Patch: Otherwise, if there are DOM failures, generate ONLY a raw Javascript snippet (no markdown) to be injected via page.evaluate()."
         + "\\nDO NOT output both JSON and JS. Choose ONE optimization strategy based on the most critical current issue aligned with your Core Goal.";
       
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: promptText,
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${this.openRouterApiKey}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "cohere/command-r-plus",
+          messages: [{ role: "user", content: promptText }]
+        })
       });
 
-      const aiResponse = response.text;
+      const json = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const aiResponse = json.choices?.[0]?.message?.content || "";
       
       if (aiResponse) {
         let cleanText = aiResponse.trim();

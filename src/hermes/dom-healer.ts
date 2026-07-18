@@ -2,11 +2,11 @@
 import { Page } from "playwright-core";
 import "dotenv/config";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 export async function healSelector(page: Page, targetDescription: string): Promise<string | null> {
-  if (!GEMINI_API_KEY) {
-    console.warn("[Hermes Healer] GEMINI_API_KEY not set. Cannot heal selector.");
+  if (!OPENROUTER_API_KEY) {
+    console.warn("[Hermes Healer] OPENROUTER_API_KEY not set. Cannot heal selector.");
     return null;
   }
 
@@ -83,18 +83,22 @@ DOM Snapshot:
 ${domString}
     `;
 
-    const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" + GEMINI_API_KEY;
+    const url = "https://openrouter.ai/api/v1/chat/completions";
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: promptText }] }]
+        model: "deepseek/deepseek-coder",
+        messages: [{ role: "user", content: promptText }]
       }),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(15000)
     });
 
-    const json = await response.json();
-    const aiResponse = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    const json = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+    const aiResponse = json.choices?.[0]?.message?.content?.trim();
 
     if (aiResponse && aiResponse !== "NULL" && aiResponse !== "null") {
       console.log(`[Hermes Healer] Successfully healed selector. New selector: ${aiResponse}`);

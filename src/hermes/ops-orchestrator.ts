@@ -123,4 +123,50 @@ export class OpsOrchestrator {
       if (this.onSkillComplete) this.onSkillComplete(skill, false, String(e));
     }
   }
+
+  /**
+   * Evaluates the last 500 lines of server logs using GLM-4.6 (Zhipu AI) via OpenRouter
+   * to detect subtle anomalies that heuristic triggers miss.
+   */
+  public async analyzeLogs(logText: string) {
+    const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+    if (!OPENROUTER_API_KEY) return;
+
+    try {
+      log.info(`[Ops] Sending ${logText.length} chars of log data to GLM-4.6 Watchdog...`);
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: "zhipu/glm-4", // Zhipu AI GLM-4 via OpenRouter
+          messages: [{
+            role: "user",
+            content: `You are the Hermes Watchdog. Analyze these server logs for severe anomalies, repeated proxy bans, or memory leaks.\nIf you detect a severe anomaly requiring immediate intervention, output ONLY a JSON object: {"action": "create_skill", "trigger": "anomaly", "script": "// nodejs code to fix"}. If everything is fine, output "OK".\n\nLogs:\n${logText.substring(0, 50000)}`
+          }]
+        }),
+        signal: AbortSignal.timeout(30000)
+      });
+
+      const json = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+      const aiResponse = json.choices?.[0]?.message?.content?.trim();
+
+      if (aiResponse && aiResponse !== "OK") {
+        if (aiResponse.includes('{"action"')) {
+           const match = aiResponse.match(/\{[\s\S]*\}/);
+           if (match) {
+             const parsed = JSON.parse(match[0]);
+             if (parsed.action === 'create_skill' && parsed.script) {
+               log.warn(`🚨 [Ops] GLM-4 detected anomaly! Generating emergency OpsSkill!`);
+               this.registerOpsSkill(parsed.script, "glm4-anomaly-generated");
+             }
+           }
+        }
+      }
+    } catch (e) {
+      log.warn(`[Ops] GLM-4 Log Analysis failed: ${String(e)}`);
+    }
+  }
 }

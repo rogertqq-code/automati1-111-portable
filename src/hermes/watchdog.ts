@@ -10,7 +10,10 @@
  * Designed to be started by server.ts as a lightweight monitoring layer.
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import { createLogger } from "../core/logger.js";
+import { OpsOrchestrator } from "./ops-orchestrator.js";
 
 const log = createLogger("Watchdog");
 
@@ -65,6 +68,8 @@ export class Watchdog {
   private lastMemoryCheck = Date.now();
   private lastHeartbeatCheck = Date.now();
   private stallDetected = false;
+  private opsOrchestrator: OpsOrchestrator;
+  private lastLogAnalysisTime = 0;
 
   constructor(config: WatchdogConfig = {}) {
     this.config = {
@@ -80,6 +85,7 @@ export class Watchdog {
       getActiveSessions: config.getActiveSessions ?? (() => 0),
       isHermesAlive: config.isHermesAlive ?? (() => true),
     };
+    this.opsOrchestrator = new OpsOrchestrator();
   }
 
   /**
@@ -145,6 +151,32 @@ export class Watchdog {
     this.checkHermesHeartbeat();
     this.checkMemory();
     this.checkStall();
+    this.runLogAnalysis();
+  }
+
+  private runLogAnalysis(): void {
+    const now = Date.now();
+    // Run log analysis every 10 minutes
+    if (now - this.lastLogAnalysisTime > 10 * 60 * 1000) {
+       this.lastLogAnalysisTime = now;
+       try {
+         const logFile = path.join(process.cwd(), 'logs', 'automati-server-out.log');
+         if (fs.existsSync(logFile)) {
+            // Read last ~50k bytes roughly to avoid memory explosion
+            const stats = fs.statSync(logFile);
+            const readSize = Math.min(stats.size, 50000);
+            const fd = fs.openSync(logFile, 'r');
+            const buffer = Buffer.alloc(readSize);
+            fs.readSync(fd, buffer, 0, readSize, Math.max(0, stats.size - readSize));
+            fs.closeSync(fd);
+            
+            const logContent = buffer.toString('utf8');
+            void this.opsOrchestrator.analyzeLogs(logContent);
+         }
+       } catch (e) {
+         log.warn(`[Watchdog] Failed to trigger log analysis: ${String(e)}`);
+       }
+    }
   }
 
   private checkHermesHeartbeat(): void {

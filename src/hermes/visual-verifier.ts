@@ -2,11 +2,11 @@
 import { Page } from "playwright-core";
 import "dotenv/config";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
 export async function verifyLoginSuccessVisually(page: Page): Promise<boolean> {
-  if (!GEMINI_API_KEY) {
-    console.warn("[Hermes Verifier] GEMINI_API_KEY not set. Falling back to true.");
+  if (!OPENROUTER_API_KEY) {
+    console.warn("[Hermes Verifier] OPENROUTER_API_KEY not set. Falling back to true.");
     return true; // Fallback to pass if no API key
   }
 
@@ -42,22 +42,27 @@ Indicators of FAILURE / FALSE POSITIVE:
 Output EXACTLY one word: "YES" if they are logged in, or "NO" if they are not.
     `;
 
-    const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=" + GEMINI_API_KEY;
+    const url = "https://openrouter.ai/api/v1/chat/completions";
     const response = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENROUTER_API_KEY}`
+      },
       body: JSON.stringify({
-        contents: [{ 
-            parts: [
-                { text: promptText },
-                { inlineData: { mimeType: "image/jpeg", data: base64Image } }
-            ] 
+        model: "openbmb/minicpm-lcm-tutorial", // or any minicpm variant on OpenRouter, or fallback to auto
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: promptText },
+            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+          ]
         }]
       })
     });
 
-    const json = await response.json();
-    const aiResponse = json.candidates?.[0]?.content?.parts?.[0]?.text?.trim().toUpperCase();
+    const json = await response.json() as { choices?: Array<{ message?: { content?: string } }> };
+    const aiResponse = json.choices?.[0]?.message?.content?.trim().toUpperCase();
 
     if (aiResponse && aiResponse.includes("YES")) {
       console.log(`[Hermes Verifier] AI Confirmed successful login (Confidence: HIGH)`);
