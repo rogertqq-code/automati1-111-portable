@@ -28,10 +28,11 @@ describe('API Stress & Fortification Tests', () => {
   }, 15000);
 
   it('should block 50 concurrent unauthorized requests without crashing', async () => {
-    // Bombard the scaling endpoint without the API key
+    // Bombard the scaling endpoint without the API key, from a mocked external IP
     const requests = Array.from({ length: 50 }).map(() => {
       return request.post('/api/workers/scale')
         .set('Content-Type', 'application/json')
+        .set('X-Forwarded-For', '203.0.113.195') // Spoof an external IP so it doesn't get whitelisted as localhost
         .send({ instances: 5000 }) // Malicious payload
         .expect(403); // MUST be 403 Forbidden
     });

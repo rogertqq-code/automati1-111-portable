@@ -497,7 +497,7 @@ function parseMultipartFile(req: express.Request): Promise<Buffer> {
 // ── Express Middleware for API Security ────────────────────────────────────
 app.use((req, res, next) => {
   // Allow local connections or requests with the valid mobile API key
-  const ip = req.socket.remoteAddress;
+  const forwarded = req.headers["x-forwarded-for"]; const ip = (typeof forwarded === "string" ? forwarded.split(",")[0] : req.socket.remoteAddress) || "";
   const isLocalhost = ip === "127.0.0.1" || ip === "::1" || ip === "::ffff:127.0.0.1";
   
   if (req.path.startsWith("/api/")) {
@@ -514,7 +514,7 @@ app.use((req, res, next) => {
 });
 
 // ── Mobile Optimized Text Paste Endpoint ──────────────────────────────────
-app.post("/api/credentials/text-paste", express.text({ type: '*/*' }), async (req, res) => {
+app.post("/api/credentials/text-paste", express.text({ type: '*/*', limit: '1mb' }), async (req, res) => {
   try {
     const rawText = req.body;
     if (!rawText || typeof rawText !== 'string') {
