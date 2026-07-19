@@ -20,13 +20,15 @@ process.on("uncaughtException", (err) => {
 
 // Added CLI parsing for --targets
 const args = process.argv.slice(2);
-const targetsArg = args.find(a => a.startsWith('--targets='))?.split('=')[1] || 'joe';
+const targetsArg = args.find(a => a.startsWith('--targets='))?.split('=')[1] || 'joe,ignition';
 const testTargets = targetsArg.split(',').map(t => t.trim().toLowerCase());
 
 const JOE_URL = "https://www.joefortune.zone/login";
 const IGNITION_URL = "https://www.ignitioncasino.eu/login";
-const EMAIL = "phuttasopit@hotmail.co.th";
-const PASSWORD = "Tomo06032553";
+const JOE_EMAIL = "phuttasopit@hotmail.co.th";
+const JOE_PASSWORD = "Tomo06032553";
+const IGNITION_EMAIL = "Mattdonor@yahoo.com";
+const IGNITION_PASSWORD = "Dada0707#";
 const TIMEOUT_MS = 90000;
 
 const appConfig: AppConfig = ConfigStore.load();
@@ -88,15 +90,16 @@ async function waitForLoginSuccess(page: Page, backend: string, timeoutMs: numbe
   throw new Error(`Login success not detected within ${timeoutMs}ms`);
 }
 
-async function runGoldenFlow(backend: string, targetName: string, proxyPool?: string): Promise<SessionHandle> {
-  const proxy = pickProxy([], EMAIL, backend, proxyPool || appConfig.proxyPool);
+async function runGoldenFlow(backend: string, targetName: string = "joe", proxyPool?: string): Promise<SessionHandle> {
+  const email = targetName === "ignition" ? IGNITION_EMAIL : JOE_EMAIL;
+  const proxy = pickProxy([], email, backend, proxyPool || appConfig.proxyPool);
 
   const opts: SessionOpts = {
     backend: backend as any,
     headless: false, // Force headed for tiling
     liveTest: true,
     proxy,
-    email: EMAIL,
+    email,
     cleanSession: true,
     recordVideo: false,
     useHttpCloak: appConfig.useHttpCloak,
@@ -180,6 +183,8 @@ async function runGoldenFlow(backend: string, targetName: string, proxyPool?: st
   
   // Golden Rule: Credential Entry (Autofill Replica)
   // Bypass Playwright's typing speed and apply state directly to React's internal state tracker
+  const emailToUse = targetName === "ignition" ? IGNITION_EMAIL : JOE_EMAIL;
+  const passToUse = targetName === "ignition" ? IGNITION_PASSWORD : JOE_PASSWORD;
   await page.evaluate(({ email, pass }) => {
       const eInput = document.querySelector('input[type="email"], input[name*="email"], input#email, #username') as HTMLInputElement;
       const pInput = document.querySelector('input[type="password"], input[name*="pass"], input#password') as HTMLInputElement;
@@ -200,7 +205,7 @@ async function runGoldenFlow(backend: string, targetName: string, proxyPool?: st
           item.el.dispatchEvent(new Event('input', { bubbles: true }));
           item.el.dispatchEvent(new Event('change', { bubbles: true }));
       }
-  }, { email: EMAIL, pass: PASSWORD });
+  }, { email: emailToUse, pass: passToUse });
   
   // Re-focus password field to ensure Enter targets the login form, not a stale banner
   const passInput = page.locator('input[type="password"], input[name*="pass"], input#password').first();
