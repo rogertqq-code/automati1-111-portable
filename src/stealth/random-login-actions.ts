@@ -71,25 +71,25 @@ export async function executeSubmit(
       // Focus password field and press Enter — very common for keyboard users
       await page.focus(passwordSelector).catch(() => {});
       /* stripped sleep */
-      await page.keyboard.press("Enter");
+      await page.keyboard.press("Enter", { delay: Math.floor(Math.random() * (120 - 50 + 1)) + 50 });
       break;
     }
     case "tab_enter": {
       // Tab from password to submit, then Enter
       await page.focus(passwordSelector).catch(() => {});
       /* stripped sleep */
-      await page.keyboard.press("Tab");
+      await page.keyboard.press("Tab", { delay: Math.floor(Math.random() * (120 - 50 + 1)) + 50 });
       /* stripped sleep */
-      await page.keyboard.press("Enter");
+      await page.keyboard.press("Enter", { delay: Math.floor(Math.random() * (120 - 50 + 1)) + 50 });
       break;
     }
     case "tab_space": {
       // Tab to submit, then Space (activates buttons)
       await page.focus(passwordSelector).catch(() => {});
       /* stripped sleep */
-      await page.keyboard.press("Tab");
+      await page.keyboard.press("Tab", { delay: Math.floor(Math.random() * (120 - 50 + 1)) + 50 });
       /* stripped sleep */
-      await page.keyboard.press("Space");
+      await page.keyboard.press("Space", { delay: Math.floor(Math.random() * (120 - 50 + 1)) + 50 });
       break;
     }
     case "click_offset": {

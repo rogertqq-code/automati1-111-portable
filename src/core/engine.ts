@@ -118,6 +118,18 @@ async function safeCloseSession(handle: any) {
     // Ignore extraction errors
   }
 
+  // --- Global Minimum Lifecycle Floor (Spec 5) ---
+  if (handle && handle._nodeSpawnTime) {
+    const elapsed = Date.now() - handle._nodeSpawnTime;
+    const floorMs = 100000; // 100 seconds
+    if (elapsed < floorMs) {
+      const delta = floorMs - elapsed;
+      console.log(`[Automati] Minimum Lifecycle Floor active. Idling for ${Math.round(delta/1000)}s before teardown.`);
+      await new Promise(r => setTimeout(r, delta));
+    }
+  }
+  // -----------------------------------------------
+
   await Promise.race([
     handle.close(),
     new Promise(r => { timer = setTimeout(r, 3000); })
@@ -2380,6 +2392,7 @@ export class AutomationEngine extends EventEmitter {
                   touchEvents: resolvedOsProfile === "android" ? true : undefined,
                   requeueCount: requeueCount,
                 });
+                (handle as any)._nodeSpawnTime = Date.now();
               }
               // Expose the live handle to the row-scoped timeout watcher so a
               // hard-timeout can actually close the session instead of leaving
@@ -4122,9 +4135,26 @@ export class AutomationEngine extends EventEmitter {
     let lastErr: any = null;
     for (let i = 1; i <= attempts; i++) {
       try {
-        // Blueprint: domcontentloaded is faster than networkidle — form-fill gates
-        // handle remaining readiness. networkidle hangs on infinite websockets.
-        return await page.goto(url, { waitUntil: "domcontentloaded", timeout: DynamicTimings.GOTO_TIMEOUT });
+        // Blueprint: Dual-Phase Page Load Watchdog (Spec 4)
+        if (i === 1) {
+          try {
+            return await page.goto(url, { waitUntil: "networkidle", timeout: 7000 });
+          } catch (e: unknown) {
+            const msg = ((e instanceof Error ? e.message : String(e)) || String(e)).toLowerCase();
+            if (msg.includes("err_invalid_auth_credentials") || msg.includes("err_proxy_auth") ||
+                msg.includes("err_proxy_connection_failed") || msg.includes("err_connection_refused") ||
+                msg.includes("err_empty_response") || msg.includes("err_connection_closed") ||
+                msg.includes("err_name_not_resolved")) {
+              throw new PreemptiveBlockError((e instanceof Error ? e.message : String(e)));
+            }
+            if (msg.includes("timeout")) {
+               this.log("WARN", `  Phase 1 Watchdog (7s) triggered, executing Phase 2 reload...`);
+               return await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+            }
+            throw e;
+          }
+        }
+        return await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
       } catch (e: unknown) {
         lastErr = e;
         const msg = ((e instanceof Error ? e.message : String(e)) || String(e)).toLowerCase();
@@ -5363,22 +5393,26 @@ export class AutomationEngine extends EventEmitter {
             }
 
             // Dispatch full bubbling events to satisfy React/SPA frameworks
-            const clickEvent = new MouseEvent('click', {
-              view: window,
-              bubbles: true,
-              cancelable: true,
-              buttons: 1
-            });
-            targetEl.dispatchEvent(clickEvent);
-            
-            if (targetEl.tagName.toLowerCase() === 'input') {
-              const changeEvent = new Event('change', { bubbles: true });
-              targetEl.dispatchEvent(changeEvent);
-            }
+            const delay = Math.floor(Math.random() * (150 - 60 + 1)) + 60;
+            const mousedownEvent = new MouseEvent('mousedown', { view: window, bubbles: true, cancelable: true, buttons: 1 });
+            targetEl.dispatchEvent(mousedownEvent);
+
+            setTimeout(() => {
+              const mouseupEvent = new MouseEvent('mouseup', { view: window, bubbles: true, cancelable: true, buttons: 0 });
+              targetEl!.dispatchEvent(mouseupEvent);
+              
+              const clickEvent = new MouseEvent('click', { view: window, bubbles: true, cancelable: true, buttons: 1 });
+              targetEl!.dispatchEvent(clickEvent);
+              
+              if (targetEl!.tagName.toLowerCase() === 'input') {
+                const changeEvent = new Event('change', { bubbles: true });
+                targetEl!.dispatchEvent(changeEvent);
+              }
+              console.log("[Automati] Early Remember Me checked instantly via DOM hook (TrustedEvents, " + delay + "ms latency).");
+            }, delay);
             
             clicked = true;
             observer.disconnect();
-            console.log("[Automati] Early Remember Me checked instantly via DOM hook (TrustedEvents).");
           }
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
@@ -6944,6 +6978,7 @@ export class AutomationEngine extends EventEmitter {
               stealthBypassHttpCloak: benchBkSettings.stealthBypassHttpCloak,
               injectStealthJS: benchBkSettings.injectStealthJS,
             });
+            (handle as any)._nodeSpawnTime = Date.now();
 
             const sessionCreateTime = Date.now() - backendStart;
             this.log("INFO", `🏃 [Race/${backendName}] Session created in ${(sessionCreateTime / 1000).toFixed(1)}s (${handle.sessionId})`);

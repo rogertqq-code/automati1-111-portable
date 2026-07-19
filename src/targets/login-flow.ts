@@ -232,7 +232,7 @@ async function pressEnterInPassword(page: Page, passwordSelector: string): Promi
   await page.click(passwordSelector).catch(() => { });
   await new Promise((r) => setTimeout(r, 200));
   
-  await page.keyboard.press("Enter", { delay: 100 });
+  await page.keyboard.press("Enter", { delay: Math.floor(Math.random() * (120 - 50 + 1)) + 50 });
 }
 
 async function pressClickOnSubmit(

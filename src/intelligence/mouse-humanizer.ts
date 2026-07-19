@@ -127,7 +127,7 @@ export function getSafeRestingPosition(viewportWidth: number, viewportHeight: nu
 export async function humanClick(page: Page): Promise<void> {
   // Ultrafast click
   await page.mouse.down();
-  await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30)));
+  await new Promise(r => setTimeout(r, Math.floor(Math.random() * (150 - 60 + 1)) + 60));
   await page.mouse.up();
 }
 
@@ -149,7 +149,7 @@ export async function humanClickAt(
     for (let c = 0; c < count; c++) {
       await page.mouse.move(targetX, targetY);
       await page.mouse.down();
-      await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30)));
+      await new Promise(r => setTimeout(r, Math.floor(Math.random() * (150 - 60 + 1)) + 60));
       await page.mouse.up();
       if (c < count - 1) await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30) + 10));
     }
@@ -165,7 +165,7 @@ export async function humanClickAt(
         // ghost-cursor moves to the position with a Bézier curve, then clicks
         await cursor.actions.move(targetX, targetY);
         await page.mouse.down();
-        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 40) + 10));
+        await new Promise(r => setTimeout(r, Math.floor(Math.random() * (150 - 60 + 1)) + 60));
         await page.mouse.up();
         if (c < count - 1) await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30) + 10));
       }
@@ -179,7 +179,7 @@ export async function humanClickAt(
     const steps = Math.floor(Math.random() * 8) + 5;
     await page.mouse.move(targetX, targetY, { steps });
     await page.mouse.down();
-    await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30)));
+    await new Promise(r => setTimeout(r, Math.floor(Math.random() * (150 - 60 + 1)) + 60));
     await page.mouse.up();
     if (c < count - 1) await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30) + 10));
   }
@@ -206,9 +206,25 @@ export async function humanClickSelector(
     }
   }
   
-  // STRICT RULE: native click with ultrafast max 30ms delay
+  // Calculate 70% inner bounding box
+  try {
+    const loc = page.locator(selector).first();
+    const box = await loc.boundingBox();
+    if (box) {
+      const xMin = box.x + box.width * 0.15;
+      const xMax = box.x + box.width * 0.85;
+      const yMin = box.y + box.height * 0.15;
+      const yMax = box.y + box.height * 0.85;
+      const rx = Math.random() * (xMax - xMin) + xMin;
+      const ry = Math.random() * (yMax - yMin) + yMin;
+      await humanClickAt(page, rx, ry, opts);
+      return;
+    }
+  } catch { /* fallback to basic click if element is missing */ }
+
+  // STRICT RULE: native click with humanized 60-150ms delay
   await page.click(selector, {
-    delay: Math.floor(Math.random() * 30),
+    delay: Math.floor(Math.random() * (150 - 60 + 1)) + 60,
     force: opts?.force,
     timeout: opts?.timeout,
     clickCount: opts?.clickCount ?? 1,
