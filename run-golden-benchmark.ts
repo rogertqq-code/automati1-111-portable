@@ -6,7 +6,7 @@ import * as path from 'path';
 // Define the known golden credentials for both targets
 const GOLDEN_CREDS = {
   joe: "phuttasopit@hotmail.co.th:Tomo06032553",
-  ignition: "test@ignitioncasino.ooo:Test1234!" // Placeholder for Ignition golden cred
+  ignition: "Mattdonor@yahoo.com:Dada0707#"
 };
 
 async function run() {

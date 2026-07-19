@@ -5329,20 +5329,56 @@ export class AutomationEngine extends EventEmitter {
         let clicked = false;
         const observer = new MutationObserver(() => {
           if (clicked) return;
+          // 1. Try to find by id/name/data-testid
+          let targetEl: HTMLElement | null = null;
           const checkboxes = document.querySelectorAll('input[type="checkbox"]');
           for (const el of Array.from(checkboxes)) {
             const cb = el as HTMLInputElement;
             if ((cb.id && cb.id.toLowerCase().includes('remember')) || 
                 (cb.name && cb.name.toLowerCase().includes('remember')) ||
                 (cb.getAttribute('data-testid') && cb.getAttribute('data-testid')?.toLowerCase().includes('remember'))) {
-              if (!cb.checked && cb.offsetParent !== null) {
-                cb.click();
-                clicked = true;
-                observer.disconnect();
-                console.log("[Automati] Early Remember Me checked instantly via DOM hook.");
+              targetEl = cb;
+              break;
+            }
+          }
+          
+          // 2. Try to find by label text if not found
+          if (!targetEl) {
+            const labels = document.querySelectorAll('label');
+            for (const el of Array.from(labels)) {
+              const label = el as HTMLLabelElement;
+              if (label.textContent && label.textContent.toLowerCase().includes('remember')) {
+                targetEl = label;
                 break;
               }
             }
+          }
+
+          if (targetEl && targetEl.offsetParent !== null) {
+            // Check if it's already checked (if it's an input)
+            if (targetEl.tagName.toLowerCase() === 'input' && (targetEl as HTMLInputElement).checked) {
+              clicked = true;
+              observer.disconnect();
+              return;
+            }
+
+            // Dispatch full bubbling events to satisfy React/SPA frameworks
+            const clickEvent = new MouseEvent('click', {
+              view: window,
+              bubbles: true,
+              cancelable: true,
+              buttons: 1
+            });
+            targetEl.dispatchEvent(clickEvent);
+            
+            if (targetEl.tagName.toLowerCase() === 'input') {
+              const changeEvent = new Event('change', { bubbles: true });
+              targetEl.dispatchEvent(changeEvent);
+            }
+            
+            clicked = true;
+            observer.disconnect();
+            console.log("[Automati] Early Remember Me checked instantly via DOM hook (TrustedEvents).");
           }
         });
         observer.observe(document.documentElement, { childList: true, subtree: true });
@@ -5558,7 +5594,7 @@ export class AutomationEngine extends EventEmitter {
                   viewport: vp,
                 })
               ),
-              new Promise<any>((_, rej) => setTimeout(() => rej(new Error("Choreography timeout")), 15000))
+              new Promise<any>((_, rej) => setTimeout(() => rej(new Error("Choreography timeout")), 45000))
             ]);
             this.log("DEBUG", `[FLOW DEBUG] ✅ Completed executeUnifiedLoginChoreography`);
             success = result.success;

@@ -542,9 +542,16 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
   // ── PRE-SUBMIT WICKETKEEPER GATE ────────────────────────────────────────
   // Rule: Must wait for the PoW token before clicking submit
   if (wicketkeeperPromise) {
-    log.debug(`Pre-submit gate: waiting for Wicketkeeper token...`);
-    const token = await wicketkeeperPromise;
-    if (token) log.debug(`Wicketkeeper token ready: ${token.substring(0, 10)}...`);
+    log.debug(`Pre-submit gate: waiting for Wicketkeeper token (max 12s)...`);
+    const token = await Promise.race([
+      wicketkeeperPromise,
+      new Promise<null>(r => setTimeout(() => r(null), 12000))
+    ]);
+    if (token) {
+      log.debug(`Wicketkeeper token ready: ${token.substring(0, 10)}...`);
+    } else {
+      log.warn(`Wicketkeeper gate timed out after 12s — submitting without PoW token`);
+    }
   }
 
   // Clear in-page canonical status before submit

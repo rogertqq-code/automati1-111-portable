@@ -2,6 +2,45 @@
 import type { Page } from "playwright-core";
 import { codegenExporter } from "../services/codegen-exporter.js";
 
+// Ghost-cursor for Bézier humanized mouse paths on Chromium backends
+let ghostCursorModule: any = null;
+const cursorCache = new WeakMap<Page, any>();
+
+async function getGhostCursor(): Promise<any> {
+  if (!ghostCursorModule) {
+    try {
+      ghostCursorModule = await import("ghost-cursor-playwright");
+    } catch {
+      ghostCursorModule = false; // Mark as unavailable
+    }
+  }
+  return ghostCursorModule || null;
+}
+
+async function getCursorForPage(page: Page): Promise<any> {
+  if (cursorCache.has(page)) return cursorCache.get(page);
+  const mod = await getGhostCursor();
+  if (!mod?.createCursor) return null;
+  try {
+    const cursor = await mod.createCursor(page);
+    cursorCache.set(page, cursor);
+    return cursor;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Returns true if the page belongs to a Camoufox/stealth backend.
+ * Camoufox handles mouse humanization natively at the C++ level,
+ * so we must NOT layer ghost-cursor on top of it.
+ */
+function isCamoufoxPage(page: Page): boolean {
+  const sessionId = (page as unknown as AutomatiPage).__sessionId;
+  if (!sessionId) return false;
+  return sessionId.startsWith("stealth-");
+}
+
 
 export interface AutomatiWindow extends Window {
   [key: symbol]: any;
@@ -35,8 +74,25 @@ export async function humanMouseMove(
   toY: number,
   _speedFactor: number = 1.0,
 ): Promise<void> {
-  // STRICT RULE: ultrafast max 200ms per movement rule.
-  // Playwright distributes movement over steps. 5-15 steps introduces ~20-200ms delay.
+  // Camoufox: native humanization handles this — just do the move
+  if (isCamoufoxPage(page)) {
+    const steps = Math.floor(Math.random() * 10) + 5;
+    await page.mouse.move(Math.round(toX), Math.round(toY), { steps });
+    setMousePos(page, toX, toY);
+    return;
+  }
+
+  // Chromium backends: use ghost-cursor Bézier paths
+  const cursor = await getCursorForPage(page);
+  if (cursor?.actions?.move) {
+    try {
+      await cursor.actions.move(Math.round(toX), Math.round(toY));
+      setMousePos(page, toX, toY);
+      return;
+    } catch { /* fall through to basic */ }
+  }
+
+  // Fallback: stepped movement (better than teleport)
   const steps = Math.floor(Math.random() * 10) + 5;
   await page.mouse.move(Math.round(toX), Math.round(toY), { steps });
   setMousePos(page, toX, toY);
@@ -87,9 +143,41 @@ export async function humanClickAt(
   const count = options?.clickCount ?? 1;
   const targetX = Math.round(x);
   const targetY = Math.round(y);
-  
+
+  // Camoufox: native humanization — use simple click (Camoufox adds Bézier paths internally)
+  if (isCamoufoxPage(page)) {
+    for (let c = 0; c < count; c++) {
+      await page.mouse.move(targetX, targetY);
+      await page.mouse.down();
+      await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30)));
+      await page.mouse.up();
+      if (c < count - 1) await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30) + 10));
+    }
+    setMousePos(page, targetX, targetY);
+    return;
+  }
+
+  // Chromium backends: use ghost-cursor Bézier paths for human-like movement + click
+  const cursor = await getCursorForPage(page);
+  if (cursor?.actions?.click) {
+    try {
+      for (let c = 0; c < count; c++) {
+        // ghost-cursor moves to the position with a Bézier curve, then clicks
+        await cursor.actions.move(targetX, targetY);
+        await page.mouse.down();
+        await new Promise(r => setTimeout(r, Math.floor(Math.random() * 40) + 10));
+        await page.mouse.up();
+        if (c < count - 1) await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30) + 10));
+      }
+      setMousePos(page, targetX, targetY);
+      return;
+    } catch { /* fall through to basic */ }
+  }
+
+  // Fallback: stepped movement (still better than raw teleport)
   for (let c = 0; c < count; c++) {
-    await page.mouse.move(targetX, targetY);
+    const steps = Math.floor(Math.random() * 8) + 5;
+    await page.mouse.move(targetX, targetY, { steps });
     await page.mouse.down();
     await new Promise(r => setTimeout(r, Math.floor(Math.random() * 30)));
     await page.mouse.up();
@@ -105,6 +193,17 @@ export async function humanClickSelector(
 ): Promise<void> {
   if ((page as unknown as AutomatiPage).__sessionId) {
     codegenExporter.logAction((page as unknown as AutomatiPage).__sessionId!, `await page.click('${selector}');`);
+  }
+
+  // Chromium backends: try ghost-cursor for selector-based clicks
+  if (!isCamoufoxPage(page)) {
+    const cursor = await getCursorForPage(page);
+    if (cursor?.actions?.click) {
+      try {
+        await cursor.actions.click({ target: selector });
+        return;
+      } catch { /* fall through to native click */ }
+    }
   }
   
   // STRICT RULE: native click with ultrafast max 30ms delay

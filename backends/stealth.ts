@@ -92,18 +92,11 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
 
   // Cold-start a new browser EVERY session to guarantee strict identity isolation.
   //
-  // ── Humanize duration: derived from the interaction profile ──
-  // The official Camoufox docs accept True (default ~1.5s) or a float (max cursor
-  // movement duration in seconds). Using a per-credential float creates behavioral
-  // diversity: "power-user" profiles get fast 0.8s, "cautious-newcomer" gets 2.5s.
-  const humanizeMaxSeconds = interactionProfile
-    ? (() => {
-        const speeds: Record<string, number> = {
-          "fast": 0.8, "normal": 1.5, "slow": 2.5
-        };
-        return speeds[interactionProfile.mouseSpeed] ?? 1.5;
-      })()
-    : 1.5;
+  // ── Humanize duration: random 0.4–0.9s per session ──
+  // Creates natural behavioral diversity: each browser instance gets a unique
+  // cursor speed. Range 0.4–0.9s is faster and more realistic than the old
+  // profile-based values (0.8/1.5/2.5s) which felt sluggish.
+  const humanizeMaxSeconds = 0.4 + Math.random() * 0.5; // 0.4–0.9s range
 
   const browserConfig: any = {
     headless,

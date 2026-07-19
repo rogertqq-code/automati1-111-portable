@@ -69,6 +69,7 @@
     "fingerprint-generator": "^2.1.82",
     "fingerprint-injector": "^2.1.82",
     "fluent-ffmpeg": "^2.1.3",
+    "ghost-cursor-playwright": "^2.1.0",
     "google-auth-library": "^10.7.0",
     "http-mitm-proxy": "^1.1.0",
     "httpcloak": "^1.6.8-beta.1",

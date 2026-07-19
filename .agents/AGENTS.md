@@ -89,3 +89,7 @@ When Hermes is operating in fully autonomous mode (e.g., via `/goal`), it posses
 3. **Full Directory & Config Access**: Hermes has full read/write access to the `.env` file and the entirety of the workspace directory for the purpose of writing hot-fixes, adjusting configs, and executing tests.
 4. **Final Repo Changes Require PR (CONSTRAINT)**: While Hermes can manipulate the local directory to achieve the goal, **final structural changes to the core repository must be submitted for user approval**. Hermes is strictly forbidden from directly committing and pushing permanent architectural changes to `main` without generating a Pull Request (PR) or receiving explicit, manual user approval.
 5. **Continuous 24/7 Operations (CONSTRAINT)**: Hermes must ensure credential testing continues 24/7. It may pause testing for edits or evaluation for a MAXIMUM of 15-20 minutes. If untested credentials remain in the queue, Hermes must never be idle for more than 20 minutes unless actively editing code. Once edits are complete, testing MUST resume immediately.
+
+## No_Account Classification Rule (ABSOLUTE)
+
+An outcome can ONLY be classified as a `no_account` result if there are 4 login attempts back-to-back in ONE session/window for that ONE target site, and after EACH of those 4 attempts, the site either returned an "incorrect" response OR the incorrect message stayed exactly the same (including if the response text appears to stay the same on the 3rd and 4th attempt). If this strict 4-attempt failure sequence is not fully observed, it cannot be deemed `no_account`.
