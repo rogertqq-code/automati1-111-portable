@@ -940,12 +940,31 @@
 
         const pulseClass = isDone ? 'done' : (status === 'testing' ? '' : 'idle');
         const statusLabel = status.toUpperCase() + (isDone ? '' : ' [IN-FLIGHT]');
-        el.innerHTML = `<div class="feed-row-header"><div class="feed-row-pulse ${pulseClass}"></div><div class="feed-row-email" title="${ea(em)}">${ea(em)}</div><div class="feed-row-status"><span>${ea(statusLabel)}</span></div><div class="feed-row-actions">${recUrl ? `<button class="btn btn-start btn-sm" onclick="openVideoModal(${ja(recUrl)},${ja(em)})">▶ VOD</button>` : ''}<button class="btn btn-ghost btn-sm" onclick="retestCredential('${ea(em)}',${ri})">🔄</button></div></div><div class="feed-row-body">${headerHTML}</div>`;
+        el.innerHTML = `<div class="feed-row-header"><div class="feed-row-pulse ${pulseClass}"></div><div class="feed-row-email" title="${ea(em)}">${ea(em)}</div><div class="feed-row-status"><span>${ea(statusLabel)}</span></div><div class="feed-row-actions">${recUrl ? `<button class="btn btn-start btn-sm" onclick="openVideoModal(${ja(recUrl)},${ja(em)})">▶ VOD</button>` : ''}<button class="btn btn-ghost btn-sm" onclick="retestCredential('${ea(em)}',${ri})">🔄</button></div></div><div class="feed-row-body" style="position:relative;">${headerHTML}<div class="screenshot-overlay">[Terminal Logs]\n...${ea(statusLabel)}\nWaiting for stream events...</div></div>`;
         g.prepend(el);
         // Auto-scroll each screenshot strip
         el.querySelectorAll('.feed-site-screenshots').forEach(sc => { sc.scrollLeft = sc.scrollWidth; });
       });
       updateLiveViewActiveCount();
+      
+      // Update Effective Configuration Matrix
+      const matrixEl = document.getElementById('effectiveConfigPreview');
+      if (matrixEl) {
+        let summary = `[ACTIVE BACKEND]: ${backend.toUpperCase()}` + '\n';
+        if (isRotate) summary += `[WARNING]: UI selections for proxies, stealth, and mode will be OVERRIDDEN per-session by the ${backend} rotation engine!` + '\n';
+        
+        summary += '\n--- DEPENDENCIES ---\n';
+        summary += `HttpCloak: ${httpCloakSupported ? (httpCloakOn ? 'ENABLED' : 'DISABLED') : 'LOCKED (Unsupported)'}` + '\n';
+        summary += `JS Stealth Injection: ${!isStealth && !isCurl && backend !== 'spider-rest' ? (document.getElementById('advInjectStealthJS')?.checked ? 'ENABLED' : 'DISABLED') : 'LOCKED (Unsupported / Native Camoufox)'}` + '\n';
+        
+        summary += '\n--- PERFORMANCE ---\n';
+        const concurrency = document.getElementById('advConcurrency')?.value || 1;
+        summary += `Concurrency: ${concurrency} threads` + '\n';
+        if (concurrency > 10 && !isHeadless) summary += `[RISK]: ${concurrency} headed instances may cause out-of-memory crashes.` + '\n';
+        
+        matrixEl.textContent = summary;
+      }
+
       syncConfigStrip();
     }
 
