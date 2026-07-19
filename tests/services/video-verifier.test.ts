@@ -53,14 +53,13 @@ vi.mock("ffmpeg-static", () => ({ default: "/fake/ffmpeg" }));
 
 import {
   isVerificationAvailable,
-  extractKeyFrames,
   classifyWithAI,
   verifySiteRecording,
   processVerificationJob,
   validateAiConfig
 } from "../../src/services/video-verifier.js";
+import { extractKeyFrames } from "../../src/services/video-extraction.js";
 
- 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const { __generateContentMock } = await import("@google/generative-ai") as any;
 const cp = await import("child_process");
@@ -79,8 +78,9 @@ describe("video-verifier", () => {
     process.env.GEMINI_API_KEY = "fake-key";
     
     const mod = await import("../../src/services/video-verifier.js");
+      const extractionMod = await import("../../src/services/video-extraction.js");
     isVerificationAvailable = mod.isVerificationAvailable;
-    extractKeyFrames = mod.extractKeyFrames;
+    extractKeyFrames = extractionMod.extractKeyFrames;
     classifyWithAI = mod.classifyWithAI;
     verifySiteRecording = mod.verifySiteRecording;
     processVerificationJob = mod.processVerificationJob;

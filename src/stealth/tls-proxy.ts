@@ -21,21 +21,29 @@ export interface JA3Profile {
 
 export class TLSProxyEngine {
   private profiles: JA3Profile[] = [];
+  private loadPromise: Promise<void> | null = null;
 
   constructor() {
-    this.loadProfiles();
+    this.loadProfiles().catch((e) => {
+      log.warn(`Failed to start loading JA3 profiles: ${String(e)}`);
+    });
   }
 
-  private loadProfiles() {
-    try {
-      const p = path.join(__dirname, "../../data/ja3-profiles.json");
-      if (fs.existsSync(p)) {
-        this.profiles = JSON.parse(fs.readFileSync(p, "utf-8"));
-        log.info(`Loaded ${this.profiles.length} JA3 profiles for TLS evasion.`);
+  public async loadProfiles(): Promise<void> {
+    if (this.loadPromise) return this.loadPromise;
+    this.loadPromise = (async () => {
+      try {
+        const p = path.join(__dirname, "../../data/ja3-profiles.json");
+        if (fs.existsSync(p)) {
+          const data = await fs.promises.readFile(p, "utf-8");
+          this.profiles = JSON.parse(data);
+          log.info(`Loaded ${this.profiles.length} JA3 profiles for TLS evasion.`);
+        }
+      } catch (e) {
+        log.warn(`Failed to load JA3 profiles: ${String(e)}`);
       }
-    } catch (e) {
-      log.warn(`Failed to load JA3 profiles: ${String(e)}`);
-    }
+    })();
+    return this.loadPromise;
   }
 
   public getRandomProfile(): JA3Profile | undefined {

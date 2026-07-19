@@ -11,7 +11,7 @@ import * as crypto from "crypto";
 
 /** djb2 hash of an arbitrary string — returns a non-negative integer. */
 export function djb2Hash(input: string): number {
-  let hash = 0;
+  let hash = 5381;
   for (let i = 0; i < input.length; i++) {
     hash = ((hash << 5) - hash) + input.charCodeAt(i);
     hash = hash & hash; // force int32

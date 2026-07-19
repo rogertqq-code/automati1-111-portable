@@ -88,15 +88,20 @@ export function getConsistentHardware(
   // @ts-expect-error noUncheckedIndexedAccess
   const baseProfile: HardwareProfile = { ...pool[index] };
 
-  // Stage 8.2: Deterministic Hardware Sync based on IP Tier
+  // Stage 8.2: Deterministic Hardware Sync based on IP Tier (Clamped to plausible ranges)
+  const minCores = Math.min(...pool.map(p => p.cores));
+  const maxCores = Math.max(...pool.map(p => p.cores));
+  const minMemory = Math.min(...pool.map(p => p.memory));
+  const maxMemory = Math.max(...pool.map(p => p.memory));
+
   if (proxyPool === "4m") {
-    // Mobile IP: 4-8 cores, 4-8 GB RAM
-    baseProfile.cores = hash % 2 === 0 ? 4 : 8;
-    baseProfile.memory = hash % 3 === 0 ? 4 : 8;
+    // Mobile IP: ideally 4-8 cores, 4-8 GB RAM, but clamped to what the hardware preset allows
+    baseProfile.cores = Math.max(minCores, Math.min(maxCores, hash % 2 === 0 ? 4 : 8));
+    baseProfile.memory = Math.max(minMemory, Math.min(maxMemory, hash % 3 === 0 ? 4 : 8));
   } else if (proxyPool === "4r" || proxyPool === "4i" || proxyPool === "1") {
-    // Residential/ISP Desktop IP: 8-16 cores, 16-32 GB RAM
-    baseProfile.cores = hash % 2 === 0 ? 8 : 16;
-    baseProfile.memory = hash % 3 === 0 ? 16 : 32;
+    // Residential/ISP Desktop IP: ideally 8-16 cores, 16-32 GB RAM
+    baseProfile.cores = Math.max(minCores, Math.min(maxCores, hash % 2 === 0 ? 8 : 16));
+    baseProfile.memory = Math.max(minMemory, Math.min(maxMemory, hash % 3 === 0 ? 16 : 32));
   }
 
   return baseProfile;

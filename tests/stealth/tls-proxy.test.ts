@@ -3,15 +3,24 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("fs", () => ({
   default: {
     existsSync: vi.fn().mockReturnValue(true),
-    readFileSync: vi.fn().mockReturnValue(JSON.stringify([
+    promises: {
+      readFile: vi.fn().mockResolvedValue(JSON.stringify([
+        { id: "chrome-win", browser: "Chrome", os: "Windows", version: "120", ja3: "abc", ciphers: ["TLS_AES_128_GCM_SHA256"], sigalgs: "ecdsa_secp256r1_sha256" },
+        { id: "chrome-mac", browser: "Chrome", os: "MacOS", version: "120", ja3: "def", ciphers: ["TLS_AES_256_GCM_SHA384"], sigalgs: "ecdsa_secp384r1_sha384" },
+        { id: "firefox-win", browser: "Firefox", os: "Windows", version: "121", ja3: "ghi", ciphers: ["TLS_CHACHA20_POLY1305_SHA256"], sigalgs: "rsa_pss_rsae_sha256" },
+        { id: "firefox-linux", browser: "Firefox", os: "Linux", version: "121", ja3: "jkl", ciphers: ["TLS_AES_128_GCM_SHA256"], sigalgs: "ecdsa_secp256r1_sha256" },
+      ])),
+    }
+  },
+  existsSync: vi.fn().mockReturnValue(true),
+  promises: {
+    readFile: vi.fn().mockResolvedValue(JSON.stringify([
       { id: "chrome-win", browser: "Chrome", os: "Windows", version: "120", ja3: "abc", ciphers: ["TLS_AES_128_GCM_SHA256"], sigalgs: "ecdsa_secp256r1_sha256" },
       { id: "chrome-mac", browser: "Chrome", os: "MacOS", version: "120", ja3: "def", ciphers: ["TLS_AES_256_GCM_SHA384"], sigalgs: "ecdsa_secp384r1_sha384" },
       { id: "firefox-win", browser: "Firefox", os: "Windows", version: "121", ja3: "ghi", ciphers: ["TLS_CHACHA20_POLY1305_SHA256"], sigalgs: "rsa_pss_rsae_sha256" },
       { id: "firefox-linux", browser: "Firefox", os: "Linux", version: "121", ja3: "jkl", ciphers: ["TLS_AES_128_GCM_SHA256"], sigalgs: "ecdsa_secp256r1_sha256" },
     ])),
-  },
-  existsSync: vi.fn().mockReturnValue(true),
-  readFileSync: vi.fn(),
+  }
 }));
 
 import { TLSProxyEngine, type JA3Profile } from "../../src/stealth/tls-proxy.js";
@@ -19,8 +28,9 @@ import { TLSProxyEngine, type JA3Profile } from "../../src/stealth/tls-proxy.js"
 describe("TLSProxyEngine", () => {
   let engine: TLSProxyEngine;
 
-  beforeEach(() => {
+  beforeEach(async () => {
     engine = new TLSProxyEngine();
+    await engine.loadProfiles();
   });
 
   describe("getRandomProfile", () => {

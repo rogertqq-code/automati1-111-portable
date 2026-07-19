@@ -17,7 +17,7 @@ export function getEnvInt(key: string, def: number): number {
   const trimmed = raw.trim();
   const n = parseInt(trimmed, 10);
   const stripped = trimmed.startsWith('+') ? trimmed.slice(1) : trimmed;
-  if (!Number.isFinite(n) || `${n}` !== stripped) {
+  if (!Number.isFinite(n) || (`${n}` !== stripped && stripped !== "-0")) {
     log.warn(`${key}="${raw}" is not a valid integer — using default ${def}`);
     return def;
   }

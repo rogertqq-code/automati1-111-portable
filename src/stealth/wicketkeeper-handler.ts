@@ -120,16 +120,18 @@ export async function waitForWicketkeeperToken(
               }
             }
 
-            // Check character data changes (value mutations)
+            // Check character data changes (value mutations in text nodes)
             if (mutation.type === "characterData") {
               const parent = mutation.target.parentElement;
-              if (parent instanceof HTMLInputElement &&
-                  parent.value &&
-                  parent.value.length > 10) {
-                clearTimeout(watchdog);
-                observer.disconnect();
-                resolve(parent.value);
-                return;
+              if (parent instanceof HTMLElement) {
+                // Tokens can be placed in inputs (value) or spans (textContent)
+                const text = (parent instanceof HTMLInputElement) ? parent.value : parent.textContent;
+                if (text && text.length > 10) {
+                  clearTimeout(watchdog);
+                  observer.disconnect();
+                  resolve(text);
+                  return;
+                }
               }
             }
           }

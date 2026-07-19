@@ -71,7 +71,7 @@ export async function analyzeInitialResponse(response: Response, siteName: strin
         const parts = h.split(':').map(s => s.trim().toLowerCase());
         const k = parts[0];
         const v = parts[1];
-        if (k && v && headers[k]?.toLowerCase() === v) result.vectors.challenge_headers.push(h);
+        if (k && v && headers[k]?.toLowerCase().includes(v)) result.vectors.challenge_headers.push(h);
       } else {
         if (headers[h]) result.vectors.challenge_headers.push(h);
       }

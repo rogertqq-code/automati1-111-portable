@@ -68,8 +68,11 @@ export class ProxyScoreTracker {
   private subnetFailures = new Map<string, { count: number; lastFail: number; banLevel: number }>();
   
   private extractSubnet(server: string): string | undefined {
-    const ipMatch = server.match(/(\d+\.\d+\.\d+)\.\d+/);
-    return ipMatch ? ipMatch[1] : undefined;
+    const lastDot = server.lastIndexOf('.');
+    if (lastDot > 0) {
+      return server.substring(0, lastDot);
+    }
+    return undefined;
   }
 
   /** Record a per-row outcome against a proxy server. `server` is the

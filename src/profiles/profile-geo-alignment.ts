@@ -98,7 +98,8 @@ function seededBucket(seedKey?: string | number): number {
 
 
 export function pickAustralianCity(seedKey?: string | number): GeoProfile {
-  const bucket = seededBucket(seedKey);
+  const totalGeoWeight = AU_CITY_WEIGHTS.reduce((a, c) => a + c.weight, 0);
+  const bucket = seededBucket(seedKey) % Math.max(totalGeoWeight, 1);
   let acc = 0;
   const picked = AU_CITY_WEIGHTS.find((c) => {
     acc += c.weight;

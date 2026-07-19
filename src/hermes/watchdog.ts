@@ -134,7 +134,7 @@ export class Watchdog {
       running: this.interval !== null,
       lastHeartbeatCheck: this.lastHeartbeatCheck,
       lastMemoryCheck: this.lastMemoryCheck,
-      memoryMB: Math.round(memUsage.heapUsed / 1024 / 1024),
+      memoryMB: Math.round(memUsage.rss / 1024 / 1024),
       hermesAlive: this.config.isHermesAlive(),
       stallDetected: this.stallDetected,
       checksPerformed: this.checksPerformed,
@@ -202,15 +202,15 @@ export class Watchdog {
   private checkMemory(): void {
     this.lastMemoryCheck = Date.now();
     const memUsage = process.memoryUsage();
-    const heapMB = Math.round(memUsage.heapUsed / 1024 / 1024);
+    const memMB = Math.round(memUsage.rss / 1024 / 1024);
 
-    if (heapMB > this.config.memoryRestartMB) {
+    if (memMB > this.config.memoryRestartMB) {
       this.config.onRestart(
-        `Memory critical: ${heapMB}MB > ${this.config.memoryRestartMB}MB threshold`
+        `Memory critical: ${memMB}MB > ${this.config.memoryRestartMB}MB threshold`
       );
-    } else if (heapMB > this.config.memoryWarnMB) {
+    } else if (memMB > this.config.memoryWarnMB) {
       this.config.onWarn(
-        `[Watchdog] Memory warning: ${heapMB}MB > ${this.config.memoryWarnMB}MB threshold`
+        `[Watchdog] High memory usage: ${memMB}MB (Warn at ${this.config.memoryWarnMB}MB)`
       );
       // Attempt to trigger garbage collection
       if (global.gc) {

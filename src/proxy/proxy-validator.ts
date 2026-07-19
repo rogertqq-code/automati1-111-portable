@@ -54,28 +54,35 @@ export async function validateProxyIP(proxy: ProxyEntry, timeoutMs = 8000): Prom
 }
 
 /**
- * Validates an entire pool of proxies concurrently.
+ * Validates an entire pool of proxies concurrently in chunks of 50.
  * Returns only the proxies that are verified as working.
  */
 export async function validateProxyPool(pool: ProxyEntry[], timeoutMs = 8000): Promise<ProxyEntry[]> {
   if (pool.length === 0) return [];
   
-  log.info(`Validating ${pool.length} proxies...`);
+  log.info(`Validating ${pool.length} proxies in chunks of 50...`);
   
-  const promises = pool.map(async (proxy) => {
-    const res = await validateProxyIP(proxy, timeoutMs);
-    const key = proxyEntryKey(proxy);
-    if (res.valid) {
-      log.debug(`[OK] Proxy ${key} -> IP: ${res.ip}`);
-      return proxy;
-    } else {
-      log.warn(`[FAIL] Proxy ${key} -> ${res.error}`);
-      return null;
-    }
-  });
-
-  const results = await Promise.all(promises);
-  const validProxies = results.filter((p): p is ProxyEntry => p !== null);
+  const validProxies: ProxyEntry[] = [];
+  const chunkSize = 50;
+  
+  for (let i = 0; i < pool.length; i += chunkSize) {
+    const chunk = pool.slice(i, i + chunkSize);
+    
+    const promises = chunk.map(async (proxy) => {
+      const res = await validateProxyIP(proxy, timeoutMs);
+      const key = proxyEntryKey(proxy);
+      if (res.valid) {
+        log.debug(`[OK] Proxy ${key} -> IP: ${res.ip}`);
+        return proxy;
+      } else {
+        log.warn(`[FAIL] Proxy ${key} -> ${res.error}`);
+        return null;
+      }
+    });
+    
+    const results = await Promise.all(promises);
+    validProxies.push(...results.filter((p): p is ProxyEntry => p !== null));
+  }
   
   log.info(`Proxy validation complete: ${validProxies.length}/${pool.length} proxies are healthy.`);
   return validProxies;

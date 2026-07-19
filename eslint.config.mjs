@@ -17,6 +17,7 @@ export default tseslint.config(
       '.kombai/**',
       'extensions/**',
       'native/**',
+      'models/**',
       'pow-solver/**',
       'hermes/hermes-daemon.cjs',
       'get-sizes.cjs',

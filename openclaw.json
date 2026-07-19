@@ -19,7 +19,23 @@
       "automati-supervisor",
       "automati-self-heal",
       "automati-research",
-      "automati-reporter"
+      "automati-reporter",
+      "automati-mutation",
+      "automati-threat",
+      "automati-priority",
+      "automati-experiment",
+      "automati-zombiehunter",
+      "automati-cookiecalibrator",
+      "automati-costcontroller",
+      "automati-dbvacuum",
+      "automati-localllm",
+      "automati-autoresearch",
+      "automati-proxynegotiator",
+      "automati-powsolver",
+      "automati-telemetryoracle",
+      "automati-honeytrap",
+      "automati-captchabypass",
+      "automati-personafabricator"
     ]
   },
   "tools": {
