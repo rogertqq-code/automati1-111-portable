@@ -2186,3 +2186,58 @@
       a.click();
   };
   
+async function fetchGoldenStats() {
+  const container = document.getElementById('goldenStatsContainer');
+  if (!container) return;
+  try {
+    container.innerHTML = "Fetching latest stats...";
+    const res = await fetch('/api/golden/stats');
+    const data = await res.json();
+    if (data.error) {
+      container.innerHTML = `<div style="color:var(--amber)">${data.error}</div>`;
+      return;
+    }
+    const d = new Date(data.timestamp).toLocaleString();
+    let html = `<div style="margin-bottom:10px; color:var(--text3);">Last Run: ${d}</div>`;
+    if (data.winner) {
+      html += `<div style="margin-bottom:10px; font-weight:bold; color:var(--green);">👑 Winner: ${data.winner}</div>`;
+    } else {
+      html += `<div style="margin-bottom:10px; font-weight:bold; color:var(--red);">❌ No Winner</div>`;
+    }
+    
+    html += `<table class="cred-table" style="width:100%; border-collapse: collapse; margin-top: 10px;">
+      <thead>
+        <tr>
+          <th style="text-align:left; padding:4px;">Backend</th>
+          <th style="text-align:left; padding:4px;">Status</th>
+          <th style="text-align:left; padding:4px;">Joe</th>
+          <th style="text-align:left; padding:4px;">Ignition</th>
+          <th style="text-align:left; padding:4px;">Total</th>
+          <th style="text-align:left; padding:4px;">Honeypots</th>
+          <th style="text-align:left; padding:4px;">Burns</th>
+        </tr>
+      </thead>
+      <tbody>`;
+      
+    data.leaderboard.forEach(row => {
+      const isWinner = row.winner;
+      const rowStyle = isWinner ? `background: rgba(34, 197, 94, 0.1); border-left: 2px solid var(--green);` : "";
+      html += `<tr style="${rowStyle}">
+        <td style="padding:4px;">${row.backend} ${isWinner ? '👑' : ''}</td>
+        <td style="padding:4px;">${row.status}</td>
+        <td style="padding:4px;">${row.joeTime ? (row.joeTime/1000).toFixed(1)+'s' : (row.joeStatus || '-')}</td>
+        <td style="padding:4px;">${row.ignitionTime ? (row.ignitionTime/1000).toFixed(1)+'s' : (row.ignitionStatus || '-')}</td>
+        <td style="padding:4px;">${(row.totalTime/1000).toFixed(1)}s</td>
+        <td style="padding:4px;">${row._honeypots}</td>
+        <td style="padding:4px;">${row._burns}</td>
+      </tr>`;
+    });
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+  } catch(e) {
+    container.innerHTML = `<div style="color:var(--red)">Failed to fetch stats: ${e.message}</div>`;
+  }
+}
+
+// Call once immediately
+setTimeout(fetchGoldenStats, 1000);

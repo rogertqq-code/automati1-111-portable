@@ -767,6 +767,20 @@ app.post("/api/workers/scale", express.json(), (req, res) => {
 
 const serverStartTime = Date.now();
 
+app.get("/api/golden/stats", (_req, res) => {
+  try {
+    const statsPath = path.join(process.cwd(), 'data', 'latest-golden-benchmark.json');
+    if (fs.existsSync(statsPath)) {
+      const stats = JSON.parse(fs.readFileSync(statsPath, 'utf8'));
+      res.json(stats);
+    } else {
+      res.json({ error: "No benchmark run found." });
+    }
+  } catch (err) {
+    res.status(500).json({ error: "Failed to load golden stats." });
+  }
+});
+
 app.get("/api/health", (_req, res) => {
   try {
     const memUsage = process.memoryUsage();
