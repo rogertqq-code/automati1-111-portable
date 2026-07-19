@@ -97,4 +97,5 @@ learning/
 *.jsonl
 proxy-pool-*.txt
 .vscode/samurai-agent/
+*.gguf
 
