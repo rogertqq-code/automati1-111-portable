@@ -522,3 +522,15 @@ export function getOrchestrator(opts?: OrchestratorOptions): ResearchOrchestrato
 export function _resetOrchestrator(): void {
   _singleton = undefined;
 }
+
+export function generateOfflineSkill(vector: string, domain: string): string {
+  const templates: Record<string, string> = {
+    webdriver_detected: "(function() { Object.defineProperty(navigator, 'webdriver', { get: () => false, configurable: true }); })();",
+    chrome_runtime_missing: "(function() { if (!window.chrome) window.chrome = {}; if (!window.chrome.runtime) window.chrome.runtime = { id: 'x' }; })();",
+    css_supports_mismatch: "(function() { var orig = CSS.supports; CSS.supports = function() { return orig.apply(this, arguments); }; })();",
+    canvas_fingerprint: "(function() { var orig = HTMLCanvasElement.prototype.toDataURL; HTMLCanvasElement.prototype.toDataURL = function(type) { return orig.call(this, type); }; })();",
+    timezone_mismatch: "(function() { /* Handled by stealth-scripts timezone alignment */ })();",
+    hardware_concurrency_anomaly: "(function() { Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 4, configurable: true }); })();",
+  };
+  return templates[vector] ?? `// AutoResearchClaw skill for ${vector}\n// Target: ${domain}\n// No template available — manual investigation needed`;
+}

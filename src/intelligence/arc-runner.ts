@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { ResearchTarget, ResearchSkill } from "./research-orchestrator.js";
+import { ResearchTarget, ResearchSkill, generateOfflineSkill } from "./research-orchestrator.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -56,7 +56,7 @@ export async function runAutoResearchClaw(target: ResearchTarget, context: any):
         id: `arc-${target.domain}-${vector}-${Date.now()}`,
         vector,
         target: target.domain,
-        script: this.generateOfflineSkill(vector, target.domain),
+        script: generateOfflineSkill(vector, target.domain),
         frameworks: ["camoufox", "cloakbrowser", "zendriver", "spider"],
         generatedBy: "autoresearchclaw" as const,
         generatedAt: new Date().toISOString(),

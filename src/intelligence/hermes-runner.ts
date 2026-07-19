@@ -2,7 +2,7 @@
 import fs from "node:fs";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { ResearchTarget, ResearchSkill } from "./research-orchestrator.js";
+import { ResearchTarget, ResearchSkill, generateOfflineSkill } from "./research-orchestrator.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -59,7 +59,7 @@ export async function runHermes(target: ResearchTarget, context: any): Promise<{
         id: `hermes-${target.domain}-${vector}-${Date.now()}`,
         vector,
         target: target.domain,
-        script: `// Hermes deep-scan skill for ${vector}\n// Zero-day analysis for ${target.domain}\n${this.generateOfflineSkill(vector, target.domain)}`,
+        script: `// Hermes deep-scan skill for ${vector}\n// Zero-day analysis for ${target.domain}\n${generateOfflineSkill(vector, target.domain)}`,
         frameworks: ["camoufox", "cloakbrowser", "zendriver", "spider"],
         generatedBy: "hermes" as const,
         generatedAt: new Date().toISOString(),

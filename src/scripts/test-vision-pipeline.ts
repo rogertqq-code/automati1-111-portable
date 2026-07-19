@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { extractKeyFrames, classifyWithAI } from '../services/video-verifier.js';
+import { classifyWithAI } from '../services/video-verifier.js';
+import { extractKeyFrames } from '../services/video-extraction.js';
 import { createLogger } from '../core/logger.js';
 
 const log = createLogger('test-vision-pipeline');
@@ -35,7 +36,7 @@ async function main() {
   const debugDir = path.resolve('.vision-debug');
   if (!fs.existsSync(debugDir)) fs.mkdirSync(debugDir);
   
-  frames.forEach((buffer, idx) => {
+  frames.forEach((buffer: Buffer, idx: number) => {
     fs.writeFileSync(path.join(debugDir, `frame-${idx}.jpg`), buffer);
   });
   log.info(`Saved debug frames to ${debugDir}`);

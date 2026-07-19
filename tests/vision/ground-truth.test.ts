@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
-import { extractKeyFrames, classifyWithAI } from '../../src/services/video-verifier.js';
+import { classifyWithAI } from '../../src/services/video-verifier.js';
+import { extractKeyFrames } from '../../src/services/video-extraction.js';
 
 describe('AI Vision Video Verifier Ground-Truth Suite', () => {
   const fixturesDir = path.resolve(__dirname, 'fixtures');

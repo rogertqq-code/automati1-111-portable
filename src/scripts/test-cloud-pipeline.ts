@@ -1,7 +1,8 @@
 import "dotenv/config";
 import fs from 'node:fs';
 import path from 'node:path';
-import { extractKeyFrames, classifyWithAI } from '../services/video-verifier.js';
+import { classifyWithAI } from '../services/video-verifier.js';
+import { extractKeyFrames } from '../services/video-extraction.js';
 import { GcsUploader } from '../services/gcs-uploader.js';
 import { initDB, getStmt } from '../core/database.js';
 
