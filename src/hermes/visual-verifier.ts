@@ -2,9 +2,8 @@
 import { Page } from "playwright-core";
 import "dotenv/config";
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-
 export async function verifyLoginSuccessVisually(page: Page): Promise<boolean> {
+  const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
   if (!OPENROUTER_API_KEY) {
     console.warn("[Hermes Verifier] OPENROUTER_API_KEY not set. Falling back to true.");
     return true; // Fallback to pass if no API key

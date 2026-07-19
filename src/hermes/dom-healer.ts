@@ -2,9 +2,8 @@
 import { Page } from "playwright-core";
 import "dotenv/config";
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-
 export async function healSelector(page: Page, targetDescription: string): Promise<string | null> {
+  const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
   if (!OPENROUTER_API_KEY) {
     console.warn("[Hermes Healer] OPENROUTER_API_KEY not set. Cannot heal selector.");
     return null;
