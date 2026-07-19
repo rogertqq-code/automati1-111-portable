@@ -3,10 +3,10 @@ import { Page } from "playwright-core";
 import "dotenv/config";
 
 export async function verifyLoginSuccessVisually(page: Page): Promise<boolean> {
-  const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
-  if (!OPENROUTER_API_KEY) {
-    console.warn("[Hermes Verifier] OPENROUTER_API_KEY not set. Falling back to true.");
-    return true; // Fallback to pass if no API key
+  const DISABLE_VISUAL_VERIFICATION = process.env.DISABLE_VISUAL_VERIFICATION;
+  if (DISABLE_VISUAL_VERIFICATION === 'true') {
+    console.log("[Hermes Verifier] Visual verification disabled. Skipping.");
+    return true; 
   }
 
   try {
@@ -41,15 +41,18 @@ Indicators of FAILURE / FALSE POSITIVE:
 Output EXACTLY one word: "YES" if they are logged in, or "NO" if they are not.
     `;
 
-    const url = "https://openrouter.ai/api/v1/chat/completions";
+    // Local llama.cpp server endpoint for MiniCPM-V
+    const url = "http://127.0.0.1:8080/v1/chat/completions";
     const response = await fetch(url, {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENROUTER_API_KEY}`
+        // Authorization header is usually not required for local llama-server unless configured
+        'Authorization': `Bearer local-dummy-key`
       },
       body: JSON.stringify({
-        model: "openbmb/minicpm-lcm-tutorial", // or any minicpm variant on OpenRouter, or fallback to auto
+        // Model name is ignored by llama-server but required for OpenAI API compatibility
+        model: "minicpm-v-2_6-local", 
         messages: [{
           role: "user",
           content: [
