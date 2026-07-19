@@ -1,10 +1,8 @@
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import supertest from 'supertest';
-// Normally we'd import the Express app directly, but since server.ts calls app.listen directly,
-// we will hit the local instance running in the background for this stress test.
-// Make sure `npm run start` is running locally before executing this.
+import { app } from '../../src/server/server.js';
 
-const request = supertest('http://127.0.0.1:3011');
+const request = supertest(app);
 const MOBILE_API_KEY = process.env.MOBILE_API_KEY || "hermes-ios-app-key-998877";
 
 describe('API Stress & Fortification Tests', () => {

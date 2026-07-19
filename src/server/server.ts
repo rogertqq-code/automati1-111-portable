@@ -42,7 +42,7 @@ import { generateDeepAnalysis } from "../services/telemetry-analyzer.js";
 import { emailDenylist } from "../core/email-denylist.js";
 
 import { proxyScoreTracker } from "../../backends/index.js";
-import { isVerificationAvailable, validateGeminiApiKey } from "../services/video-verifier.js";
+import { isVerificationAvailable, validateAiConfig } from "../services/video-verifier.js";
 import { type FpStrategy } from "../profiles/profile-useragent.js";
 import { createLogger } from "../core/logger.js";
 import { Timings } from "../core/timings.js";
@@ -216,7 +216,7 @@ function allowWsConnection(ip: string): boolean {
 
 // ─── App Setup ────────────────────────────────────────────────────────────────
 
-const app = express();
+export const app = express();
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 let _totalRequests = 0;
 app.use((_req, _res, next) => {
@@ -990,7 +990,7 @@ seedScreenshotBufferFromDisk();
 
 // ─── Gemini API Key Validation ─────────────────────────────────────────────
 if (isVerificationAvailable()) {
-  validateGeminiApiKey().catch(() => { });
+  validateAiConfig().catch(() => { });
 }
 
 // ─── GCS Cloud Upload ──────────────────────────────────────────────────────

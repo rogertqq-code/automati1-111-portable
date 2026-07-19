@@ -38,12 +38,11 @@ describe("proxy-validator", () => {
   describe("validateProxyIP", () => {
     it("should return valid true and ip when fetch succeeds", async () => {
       // Mock fetch resolving with a successful response
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+       
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: true,
         // eslint-disable-next-line @typescript-eslint/require-await
         text: async () => " 1.2.3.4 "
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await validateProxyIP(httpProxy);
@@ -56,12 +55,11 @@ describe("proxy-validator", () => {
     });
 
     it("should return valid false and error when fetch returns non-ok status", async () => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+       
       vi.mocked(fetch).mockResolvedValueOnce({
         ok: false,
         status: 403,
         statusText: "Forbidden"
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       } as any);
 
       const result = await validateProxyIP(httpProxy);
@@ -104,12 +102,11 @@ describe("proxy-validator", () => {
     it("should return only valid proxies from the pool", async () => {
       // First proxy succeeds, second fails
       vi.mocked(fetch)
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+         
         .mockResolvedValueOnce({
           ok: true,
           // eslint-disable-next-line @typescript-eslint/require-await
           text: async () => "1.2.3.4"
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } as any)
         .mockRejectedValueOnce(new Error("Failed"));
 

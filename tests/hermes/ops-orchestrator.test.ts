@@ -38,7 +38,7 @@ describe('OpsOrchestrator', () => {
     await orchestrator.analyzeLogs('TEST LOG DATA');
 
     expect(fetchSpy).toHaveBeenCalled();
-    const fetchArgs = fetchSpy.mock.calls[0];
+    const fetchArgs = fetchSpy.mock.calls[0]!;
     expect(fetchArgs[0]).toBe('https://openrouter.ai/api/v1/chat/completions');
     
     const requestOptions = fetchArgs[1] as RequestInit;

@@ -2,13 +2,15 @@ import { describe, it, expect } from "vitest";
 import { startProxyForwarder } from "../../src/proxy/proxy-forwarder.js";
 import * as net from "net";
 
+import type { ForwardProxyEntry } from "../../src/proxy/proxy-forwarder.js";
+
 describe("Proxy Forwarder", () => {
   it("rejects invalid upstream servers", async () => {
-    await expect(startProxyForwarder({ server: "" })).rejects.toThrow("proxy forwarder requires upstream.server");
+    await expect(startProxyForwarder({ server: "" } as unknown as ForwardProxyEntry)).rejects.toThrow("proxy forwarder requires upstream.server");
      
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
-    await expect(startProxyForwarder({ server: "not-a-url" } as any)).rejects.toThrow("invalid upstream proxy URL");
-    await expect(startProxyForwarder({ server: "ftp://proxy.com" })).rejects.toThrow("proxy forwarder only supports http and socks5");
+    await expect(startProxyForwarder({ server: "not-a-url" } as unknown as ForwardProxyEntry)).rejects.toThrow("invalid upstream proxy URL");
+    await expect(startProxyForwarder({ server: "ftp://proxy.com" } as unknown as ForwardProxyEntry)).rejects.toThrow("proxy forwarder only supports http and socks5");
   });
 
   it("handles basic http proxy forwarding", async () => {

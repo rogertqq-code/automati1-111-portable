@@ -245,7 +245,7 @@ export class ThreatMonitor {
       this.lastRequestTime = Date.now(); 
       try {
         const url = new URL(req.url());
-        let domain = url.hostname.replace(/^www\./, '');
+        const domain = url.hostname.replace(/^www\./, '');
         // Allow subdomains of known domains
         let isKnown = false;
         for (const known of this.knownDomains) {

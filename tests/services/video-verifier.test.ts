@@ -57,7 +57,7 @@ import {
   classifyWithAI,
   verifySiteRecording,
   processVerificationJob,
-  validateGeminiApiKey
+  validateAiConfig
 } from "../../src/services/video-verifier.js";
 
  
@@ -66,35 +66,52 @@ const { __generateContentMock } = await import("@google/generative-ai") as any;
 const cp = await import("child_process");
 
 describe("video-verifier", () => {
-  beforeEach(() => {
+  let isVerificationAvailable: any;
+  let extractKeyFrames: any;
+  let classifyWithAI: any;
+  let verifySiteRecording: any;
+  let processVerificationJob: any;
+  let validateAiConfig: any;
+
+  beforeEach(async () => {
     vi.clearAllMocks();
+    vi.resetModules();
     process.env.GEMINI_API_KEY = "fake-key";
+    
+    const mod = await import("../../src/services/video-verifier.js");
+    isVerificationAvailable = mod.isVerificationAvailable;
+    extractKeyFrames = mod.extractKeyFrames;
+    classifyWithAI = mod.classifyWithAI;
+    verifySiteRecording = mod.verifySiteRecording;
+    processVerificationJob = mod.processVerificationJob;
+    validateAiConfig = mod.validateAiConfig;
   });
 
   describe("isVerificationAvailable", () => {
     it("returns true if valid", async () => {
       // For testing, validate updates the state
       __generateContentMock.mockResolvedValueOnce({ response: { text: () => "hello" } });
-      await validateGeminiApiKey();
+      await validateAiConfig();
       expect(isVerificationAvailable()).toBe(true);
     });
   });
 
-  describe("validateGeminiApiKey", () => {
+  describe("validateAiConfig", () => {
     it("returns false if no key is present", async () => {
       vi.resetModules();
       delete process.env.GEMINI_API_KEY;
       delete process.env.GOOGLE_AI_API_KEY;
       delete process.env.GOOGLE_AGENT_PLATFORM_API_KEY;
-      const { validateGeminiApiKey } = await import("../../src/services/video-verifier.js");
-      const result = await validateGeminiApiKey();
+      delete process.env.LOCAL_MINICPM_URL;
+      const { validateAiConfig } = await import("../../src/services/video-verifier.js");
+      const result = await validateAiConfig();
       expect(result).toBe(false);
       process.env.GEMINI_API_KEY = "fake-key";
     });
 
     it("returns false on API error and disables verification", async () => {
       __generateContentMock.mockRejectedValueOnce(new Error("403 Forbidden"));
-      const result = await validateGeminiApiKey();
+      const result = await validateAiConfig();
       expect(result).toBe(false);
       expect(isVerificationAvailable()).toBe(false);
     });
@@ -108,6 +125,7 @@ describe("video-verifier", () => {
       delete process.env.GEMINI_API_KEY;
       delete process.env.GOOGLE_AI_API_KEY;
       delete process.env.GOOGLE_AGENT_PLATFORM_API_KEY;
+      delete process.env.LOCAL_MINICPM_URL;
       const { classifyWithAI } = await import("../../src/services/video-verifier.js");
       const result = await classifyWithAI([dummyBuffer], "success", "TestSite");
       expect(result.aiVerdict).toBe("unclear");

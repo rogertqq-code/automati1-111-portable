@@ -13,10 +13,27 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createLogger } from "../core/logger.js";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { z } from "zod";
+
+function clamp(val: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, val));
+}
+
+const personaSchema = z.object({
+  typingWpm: z.number().default(45).transform(v => clamp(v, 20, 100)),
+  baseKeyDelayMs: z.number().default(100).transform(v => clamp(v, 40, 250)),
+  mouseSpeedMultiplier: z.number().default(1.0).transform(v => clamp(v, 0.4, 1.8)),
+  scrollSpeedMultiplier: z.number().default(1.0).transform(v => clamp(v, 0.3, 2.0)),
+  readingMsPerWord: z.number().default(250).transform(v => clamp(v, 100, 500)),
+  typoRate: z.number().default(0.03).transform(v => clamp(v, 0.005, 0.10)),
+  pauseTendency: z.number().default(0.3).transform(v => clamp(v, 0.05, 0.8)),
+  mouseJitter: z.number().default(0.6).transform(v => clamp(v, 0.2, 1.8)),
+  personaDescription: z.string().default("AI-generated persona"),
+});
 
 const log = createLogger("ai-persona");
 
-const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_AGENT_PLATFORM_API_KEY || "").trim();
+const getApiKey = () => (process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_AGENT_PLATFORM_API_KEY || "").trim();
 const MODEL_NAME = "gemini-2.5-flash";
 const CACHE_FILE = path.resolve(process.cwd(), "persona-cache.json");
 const AI_TIMEOUT_MS = 15_000;
@@ -93,8 +110,9 @@ export async function getPersona(emailSeed: number): Promise<BehavioralPersona> 
     return personaCache[cacheKey];
   }
 
+  const apiKey = getApiKey();
   // Try AI generation
-  if (GEMINI_API_KEY) {
+  if (apiKey) {
     try {
       const persona = await generateAiPersona(emailSeed);
       personaCache[cacheKey] = persona;
@@ -114,7 +132,8 @@ export async function getPersona(emailSeed: number): Promise<BehavioralPersona> 
 }
 
 async function generateAiPersona(seed: number): Promise<BehavioralPersona> {
-  const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+  const apiKey = getApiKey();
+  const genAI = new GoogleGenerativeAI(apiKey || "");
   const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
   const responseSchema = {
@@ -154,18 +173,14 @@ async function generateAiPersona(seed: number): Promise<BehavioralPersona> {
     }),
   ]).finally(() => clearTimeout(timer));
 
-  const parsed = JSON.parse(result.response.text().trim());
+  // Parse raw JSON, will throw if invalid format
+  const parsedData = JSON.parse(result.response.text().trim());
+
+  // Validate with defaults and clamp bounds
+  const parsed = personaSchema.parse(parsedData);
 
   return {
-    typingWpm: clamp(parsed.typingWpm || 45, 20, 100),
-    baseKeyDelayMs: clamp(parsed.baseKeyDelayMs || 100, 40, 250),
-    mouseSpeedMultiplier: clamp(parsed.mouseSpeedMultiplier || 1.0, 0.4, 1.8),
-    scrollSpeedMultiplier: clamp(parsed.scrollSpeedMultiplier || 1.0, 0.3, 2.0),
-    readingMsPerWord: clamp(parsed.readingMsPerWord || 250, 100, 500),
-    typoRate: clamp(parsed.typoRate || 0.03, 0.005, 0.10),
-    pauseTendency: clamp(parsed.pauseTendency || 0.3, 0.05, 0.8),
-    mouseJitter: clamp(parsed.mouseJitter || 0.6, 0.2, 1.8),
-    personaDescription: parsed.personaDescription || "AI-generated persona",
+    ...parsed,
     source: "ai",
   };
 }
@@ -198,6 +213,3 @@ function generateFallbackPersona(seed: number): BehavioralPersona {
   };
 }
 
-function clamp(val: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, val));
-}

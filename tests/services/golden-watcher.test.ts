@@ -36,7 +36,7 @@ describe("golden-watcher", () => {
     expect(spawn).toHaveBeenCalledTimes(1);
     const args = vi.mocked(spawn).mock.calls[0];
     expect(args![0]).toBe("npx");
-    expect(args![1]).toEqual(["tsx", "run-flow-debug.ts"]);
+    expect(args![1]).toEqual(["tsx", "tests/live/run-flow-debug.ts"]);
     expect(args![2]?.env?.HEADLESS_GOLDEN).toBe("1");
     expect(args![2]?.env?.NO_VIDEO).toBe("1");
   });

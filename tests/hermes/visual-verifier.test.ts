@@ -48,7 +48,7 @@ describe('verifyLoginSuccessVisually', () => {
     expect(result).toBe(true);
     expect(fetchSpy).toHaveBeenCalled();
     
-    const fetchArgs = fetchSpy.mock.calls[0];
+    const fetchArgs = fetchSpy.mock.calls[0]!;
     expect(fetchArgs[0]).toBe('http://127.0.0.1:8080/v1/chat/completions');
     
     const req = fetchArgs[1] as RequestInit;

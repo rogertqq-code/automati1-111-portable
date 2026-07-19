@@ -206,7 +206,8 @@ describe("random-login-actions", () => {
   it("maybeClickRememberMe", async () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     await maybeClickRememberMe(mockPage);
-    expect(mockPage.$).toHaveBeenCalled();
+    // Since it is deprecated and handled elsewhere, it shouldn't query the page
+    expect(mockPage.$).not.toHaveBeenCalled();
   });
 
   it("maybeClickLabel", async () => {

@@ -58,10 +58,12 @@ export interface VerificationJob {
 
 const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_AGENT_PLATFORM_API_KEY || "").trim();
 const OPENROUTER_API_KEY = (process.env.OPENROUTER_API_KEY || "").trim();
+const LOCAL_MINICPM_URL = (process.env.LOCAL_MINICPM_URL || "").trim();
 
 // eslint-disable-next-line no-constant-binary-expression
 const MODEL_NAME = process.env.GEMINI_MODEL || "gemini-3.1-pro-preview" || "gemini-2.5-flash";
 const OPENROUTER_MODEL_NAME = process.env.OPENROUTER_MODEL || "google/gemini-1.5-pro";
+const MINICPM_MODEL_NAME = process.env.LOCAL_MINICPM_MODEL || "minicpm-v:latest";
 
 const MAX_FRAMES = 4;
 const FRAME_POSITIONS = [0.25, 0.50, 0.75, 0.90]; // fallback % of video duration
@@ -69,10 +71,11 @@ const FFMPEG_FRAME_TIMEOUT_MS = 25_000;
 const GEMINI_TIMEOUT_MS = 30_000;
 
 let IS_GEMINI_VALID = !!GEMINI_API_KEY;
-let IS_OPENROUTER_VALID = !!OPENROUTER_API_KEY;
+const IS_OPENROUTER_VALID = !!OPENROUTER_API_KEY;
+const IS_MINICPM_VALID = !!LOCAL_MINICPM_URL;
 
 export function isVerificationAvailable(): boolean {
-  return IS_GEMINI_VALID || IS_OPENROUTER_VALID;
+  return IS_GEMINI_VALID || IS_OPENROUTER_VALID || IS_MINICPM_VALID;
 }
 
 // ─── Frame Extraction ──────────────────────────────────────────────────────────
@@ -297,12 +300,12 @@ export async function classifyWithAI(
   engineOutcome: string,
   siteName: string,
 ): Promise<VerificationResult> {
-  if (!GEMINI_API_KEY && !OPENROUTER_API_KEY) {
+  if (!GEMINI_API_KEY && !OPENROUTER_API_KEY && !LOCAL_MINICPM_URL) {
     return {
       aiVerdict: "unclear",
       confidence: "low",
       matches: true,  // default to trusting engine when AI unavailable
-      reasoning: "AI verification unavailable — no API key configured",
+      reasoning: "AI verification unavailable — no API key or local endpoint configured",
       framesAnalyzed: 0,
       modelUsed: "none",
       durationMs: 0,
@@ -317,14 +320,14 @@ export async function classifyWithAI(
       matches: true,
       reasoning: "No frames available for analysis",
       framesAnalyzed: 0,
-      modelUsed: GEMINI_API_KEY ? MODEL_NAME : OPENROUTER_MODEL_NAME,
+      modelUsed: GEMINI_API_KEY ? MODEL_NAME : (LOCAL_MINICPM_URL ? MINICPM_MODEL_NAME : OPENROUTER_MODEL_NAME),
       durationMs: 0,
       signalAvailable: false,
     };
   }
 
   const start = Date.now();
-  const usedModel = GEMINI_API_KEY ? MODEL_NAME : OPENROUTER_MODEL_NAME;
+  const usedModel = GEMINI_API_KEY ? MODEL_NAME : (LOCAL_MINICPM_URL ? MINICPM_MODEL_NAME : OPENROUTER_MODEL_NAME);
 
   try {
     // Structured output schema
@@ -402,7 +405,17 @@ export async function classifyWithAI(
         }
       }
     } else {
-      // OpenRouter Fallback
+      // Local MiniCPM or OpenRouter Fallback via OpenAI Compatible Endpoint
+      const isLocal = !GEMINI_API_KEY && LOCAL_MINICPM_URL;
+      const endpoint = isLocal ? LOCAL_MINICPM_URL : "https://openrouter.ai/api/v1/chat/completions";
+      const modelName = isLocal ? MINICPM_MODEL_NAME : OPENROUTER_MODEL_NAME;
+      const headers: Record<string, string> = { "Content-Type": "application/json" };
+      if (!isLocal) {
+        headers["Authorization"] = `Bearer ${OPENROUTER_API_KEY}`;
+        headers["HTTP-Referer"] = "http://localhost:3000";
+        headers["X-Title"] = "Automati1-111 Vision";
+      }
+
       const messages = [
         {
           role: "user",
@@ -411,7 +424,7 @@ export async function classifyWithAI(
               type: "image_url",
               image_url: { url: `data:image/jpeg;base64,${frame.toString("base64")}` }
             })),
-            { type: "text", text: `Site: ${siteName}\n\n${VERIFICATION_PROMPT}` }
+            { type: "text", text: `Site: ${siteName}\n\n${VERIFICATION_PROMPT}\n\nReturn EXACTLY a JSON object with: {"verdict": "...", "confidence": "...", "reasoning": "..."}` }
           ]
         }
       ];
@@ -420,29 +433,24 @@ export async function classifyWithAI(
         try {
           let timer: NodeJS.Timeout;
           const result = await Promise.race([
-            fetch("https://openrouter.ai/api/v1/chat/completions", {
+            fetch(endpoint, {
               method: "POST",
-              headers: {
-                "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
-                "Content-Type": "application/json",
-                "HTTP-Referer": "http://localhost:3000",
-                "X-Title": "Automati1-111 Vision"
-              },
+              headers,
               body: JSON.stringify({
-                model: OPENROUTER_MODEL_NAME,
+                model: modelName,
                 messages,
                 response_format: { type: "json_object" }
               })
             }),
             new Promise<never>((_, reject) => {
-              timer = setTimeout(() => reject(new Error("OpenRouter API timeout")), GEMINI_TIMEOUT_MS);
+              timer = setTimeout(() => reject(new Error("API timeout")), GEMINI_TIMEOUT_MS);
             })
           ]).finally(() => clearTimeout(timer!));
           
-          if (!(result as Response).ok) {
-            throw new Error(`OpenRouter HTTP error: ${(result as Response).status} ${(result as Response).statusText}`);
+          if (!(result).ok) {
+            throw new Error(`OpenRouter HTTP error: ${(result).status} ${(result).statusText}`);
           }
-          const json = await (result as Response).json();
+          const json = await (result).json();
           responseText = json.choices[0].message.content.trim();
           break;
         } catch (err: unknown) {
@@ -624,12 +632,22 @@ export async function processVerificationJob(
 }
 
 /**
- * Validates that the configured Gemini API key is valid and has quota by performing a minimal generation.
- * Fails fast so the app can warn the user on startup instead of discovering during a recording verification.
+ * Validates that the configured AI verification endpoint is valid.
+ * Fails fast so the app can warn the user on startup.
  */
-export async function validateGeminiApiKey(): Promise<boolean> {
+export async function validateAiConfig(): Promise<boolean> {
+  if (LOCAL_MINICPM_URL) {
+    log.info(`🤖 Local MiniCPM endpoint configured at ${LOCAL_MINICPM_URL}`);
+    return true; // Assume local endpoint is valid if configured
+  }
+
+  if (OPENROUTER_API_KEY && !GEMINI_API_KEY) {
+    log.info("🤖 OpenRouter API key configured. Vision verification armed.");
+    return true;
+  }
+
   if (!GEMINI_API_KEY) {
-    log.warn("GEMINI_API_KEY is not configured. AI verification features will be disabled.");
+    log.warn("No AI API key or local endpoint configured. AI verification features will be disabled.");
     IS_GEMINI_VALID = false;
     return false;
   }
@@ -644,7 +662,7 @@ export async function validateGeminiApiKey(): Promise<boolean> {
     await Promise.race([
       model.generateContent("hello"),
       new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new Error("Timeout")), 10000); })
-    ]).finally(() => clearTimeout(timer));
+    ]).finally(() => clearTimeout(timer!));
     
     log.info("✅ Gemini API Key validated successfully. Vision verification is fully armed.");
     IS_GEMINI_VALID = true;
@@ -655,10 +673,12 @@ export async function validateGeminiApiKey(): Promise<boolean> {
       log.error(`🚨 Gemini API Key is valid but has exhausted its quota or is rate limited: ${msg}`);
     } else if (msg.includes("40") && !msg.includes("429")) {
       log.error(`🚨 Gemini API Key is INVALID or permissions are denied: ${msg}`);
+      IS_GEMINI_VALID = false;
+      return false;
     } else {
-      log.error(`🚨 Gemini API Key validation failed due to network/server error: ${msg}`);
+      log.warn(`⚠️ Could not reach Gemini API (${msg}). Will still attempt verification during run.`);
     }
-    IS_GEMINI_VALID = false;
-    return false;
+    IS_GEMINI_VALID = true;
+    return true;
   }
 }

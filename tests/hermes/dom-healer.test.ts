@@ -49,7 +49,7 @@ describe('healSelector', () => {
     expect(result).toBe('#new-login');
     expect(fetchSpy).toHaveBeenCalled();
     
-    const fetchArgs = fetchSpy.mock.calls[0];
+    const fetchArgs = fetchSpy.mock.calls[0]!;
     expect(fetchArgs[0]).toBe('https://openrouter.ai/api/v1/chat/completions');
     
     const req = fetchArgs[1] as RequestInit;

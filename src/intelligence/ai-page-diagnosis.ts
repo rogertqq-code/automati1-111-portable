@@ -14,7 +14,7 @@ import { createLogger } from "../core/logger.js";
 
 const log = createLogger("ai-diagnosis");
 
-const GEMINI_API_KEY = (process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_AGENT_PLATFORM_API_KEY || "").trim();
+const getApiKey = () => (process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_API_KEY || process.env.GOOGLE_AGENT_PLATFORM_API_KEY || "").trim();
 const MODEL_NAME = "gemini-2.5-flash";
 const DIAGNOSIS_TIMEOUT_MS = 15_000;
 
@@ -77,7 +77,8 @@ export async function aiDiagnosePage(
   screenshotBuffer: Buffer,
   context?: string,
 ): Promise<AiDiagnosis> {
-  if (!GEMINI_API_KEY) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     return {
       action: "continue",
       pageState: "unknown",
@@ -91,7 +92,7 @@ export async function aiDiagnosePage(
   const start = Date.now();
 
   try {
-    const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+    const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: MODEL_NAME });
 
     const parts: Part[] = [
