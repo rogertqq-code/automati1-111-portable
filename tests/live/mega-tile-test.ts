@@ -7,6 +7,7 @@ import { BrowserTiler } from "../../src/services/browser-tiler.js";
 import { type Page } from "playwright-core";
 import fs from "fs";
 import path from "path";
+import { installEarlyRememberMeHook, universalLoginFlow } from "../../src/targets/universal-login.js";
 
 process.on("uncaughtException", (err) => {
   if (err instanceof TypeError && err.message.includes("reading 'url'") && err.stack?.includes("FFBrowserContext")) {
@@ -91,6 +92,10 @@ async function runGoldenFlow(backend: string, targetName: string, targetUrl: str
     page.setDefaultTimeout(TIMEOUT_MS);
     page.setDefaultNavigationTimeout(TIMEOUT_MS);
   }
+
+  // Async Early Remember Me click hook installed BEFORE navigation
+  await installEarlyRememberMeHook(page);
+
   console.log(`[${backend}-${targetName}] Navigating to ${targetUrl}...`);
   let navOk = false;
   for (const url of [targetUrl]) {
@@ -104,36 +109,24 @@ async function runGoldenFlow(backend: string, targetName: string, targetUrl: str
   }
   if (!navOk) throw new Error("Navigation failed");
   
-  await page.evaluate(() => {
-    try { (window as any).CookieInformation?.submitAllCategories?.(); } catch {}
-  }).catch(() => {});
+  console.log(`[${backend}-${targetName}] Starting universalLoginFlow...`);
   
-  for (const sel of ['.coi-banner__accept', '[data-coi-btn="accept"]', 'button:has-text("ACCEPT ALL")', 'button:has-text("Accept All")', 'a:has-text("ACCEPT ALL")', 'button[class*="accept"]', 'a[class*="accept"]']) {
-    try {
-      const btn = page.locator(sel).first();
-      if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
-        await btn.click({ timeout: 2000 });
-        console.log(`[${backend}-${targetName}] Dismissed cookie banner via: ${sel}`);
-        break;
-      }
-    } catch {}
+  const result = await universalLoginFlow({
+    page,
+    siteName: targetName as "joe" | "ignition",
+    targetEmail: email,
+    password: pass,
+    attemptIdx: 0,
+    selectors: { username: "dummy", password: "dummy", submit: "dummy" },
+    inputText: async () => true,
+    viewport: { width: 1280, height: 800 },
+    mode: "benchmark-direct"
+  });
+
+  if (!result.success) {
+    throw new Error(`Login success not detected (networkVerdict: ${result.networkVerdict})`);
   }
   
-  await page.evaluate(() => {
-    for (const el of document.querySelectorAll('.coi-banner, .coi-consent-banner, [id*="cookie"], [class*="cookie"]')) {
-      (el as HTMLElement).style.setProperty('display', 'none', 'important');
-    }
-  }).catch(() => {});
-  
-  const emailInput = page.locator('input[type="email"], input[name*="email"], input#email, #username').first();
-  await emailInput.waitFor({ state: "visible", timeout: 30000 });
-  await emailInput.fill(email);
-  const passInput = page.locator('input[type="password"], input[name*="pass"], input#password').first();
-  await passInput.waitFor({ state: "visible", timeout: 10000 });
-  await passInput.fill(pass);
-  await passInput.click().catch(() => {});
-  await new Promise(r => setTimeout(r, 200));
-  await page.keyboard.press("Enter");
   console.log(`[${backend}-${targetName}] Submitted. Waiting for success...`);
   await waitForLoginSuccess(page, backend, TIMEOUT_MS);
 

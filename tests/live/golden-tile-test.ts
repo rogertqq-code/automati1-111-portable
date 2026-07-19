@@ -7,6 +7,7 @@ import { BrowserTiler } from "../../src/services/browser-tiler.js";
 import { type Page } from "playwright-core";
 import fs from "fs";
 import path from "path";
+import { installEarlyRememberMeHook, universalLoginFlow } from "../../src/targets/universal-login.js";
 
 // Guard against Playwright's FFBrowserContext crash (known bug with Camoufox)
 process.on("uncaughtException", (err) => {
@@ -24,7 +25,7 @@ const targetsArg = args.find(a => a.startsWith('--targets='))?.split('=')[1] || 
 const testTargets = targetsArg.split(',').map(t => t.trim().toLowerCase());
 
 const JOE_URL = "https://www.joefortune.zone/login";
-const IGNITION_URL = "https://www.ignitioncasino.eu/login";
+const IGNITION_URL = "https://www.ignitioncasino.ooo/login";
 const JOE_EMAIL = "phuttasopit@hotmail.co.th";
 const JOE_PASSWORD = "Tomo06032553";
 const IGNITION_EMAIL = "Mattdonor@yahoo.com";
@@ -124,6 +125,9 @@ async function runGoldenFlow(backend: string, targetName: string = "joe", proxyP
     ? [IGNITION_URL, "https://www.ignitioncasino.com/login"] 
     : [JOE_URL];
 
+  // Async Early Remember Me click hook installed BEFORE navigation
+  await installEarlyRememberMeHook(page);
+
   console.log(`[${backend}] Navigating to ${urlsToTry[0]}...`);
   
   // Navigate with retry to handle transient DNS/proxy failures
@@ -145,104 +149,23 @@ async function runGoldenFlow(backend: string, targetName: string = "joe", proxyP
     throw new Error("All navigation URLs failed");
   }
   
-  console.log(`[${backend}] Starting continuous background cookie banner killer...`);
+  console.log(`[${backend}] Starting universalLoginFlow...`);
   
-  // Asynchronous fire-and-forget banner killer that runs for 30s
-  // This guarantees the banner is dismissed the second it appears without blocking the flow
-  const killBanners = async () => {
-    const deadline = Date.now() + 30000;
-    while(Date.now() < deadline) {
-      try {
-        // CSS hide + native API
-        await page.evaluate(() => {
-          try { (window as any).CookieInformation?.submitAllCategories?.(); } catch {}
-          for (const el of document.querySelectorAll('.coi-banner, .coi-consent-banner, [id*="cookie"], [class*="cookie-banner"]')) {
-            (el as HTMLElement).style.setProperty('display', 'none', 'important');
-          }
-        });
-        
-        // UI Click
-        for (const sel of ['.coi-banner__accept', '[data-coi-btn="accept"]', 'button:has-text("ACCEPT ALL")', 'button:has-text("Accept All")']) {
-          const btn = page.locator(sel).first();
-          if (await btn.isVisible().catch(() => false)) {
-            await btn.click({ timeout: 500 }).catch(() => {});
-          }
-        }
-      } catch {}
-      await new Promise(r => setTimeout(r, 500));
-    }
-  };
-  killBanners().catch(() => {});
-  
-  // Wait a short moment to let initial DOM stabilize
-  await new Promise(r => setTimeout(r, 2000));
-  
-  // Wait for email input to be visible before interacting
-  const emailInput = page.locator('input[type="email"], input[name*="email"], input#email, #username').first();
-  await emailInput.waitFor({ state: "visible", timeout: 30000 });
-  
-  // Golden Rule: Credential Entry (Autofill Replica)
-  // Bypass Playwright's typing speed and apply state directly to React's internal state tracker
-  const emailToUse = targetName === "ignition" ? IGNITION_EMAIL : JOE_EMAIL;
-  const passToUse = targetName === "ignition" ? IGNITION_PASSWORD : JOE_PASSWORD;
-  await page.evaluate(({ email, pass }) => {
-      const eInput = document.querySelector('input[type="email"], input[name*="email"], input#email, #username') as HTMLInputElement;
-      const pInput = document.querySelector('input[type="password"], input[name*="pass"], input#password') as HTMLInputElement;
-      
-      for (const item of [{el: eInput, val: email}, {el: pInput, val: pass}]) {
-          if (!item.el) continue;
-          const valueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
-          const prototype = Object.getPrototypeOf(item.el);
-          const prototypeValueSetter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
-
-          if (valueSetter && valueSetter !== prototypeValueSetter) {
-              prototypeValueSetter?.call(item.el, item.val);
-          } else if (valueSetter) {
-              valueSetter.call(item.el, item.val);
-          } else {
-              item.el.value = item.val;
-          }
-          item.el.dispatchEvent(new Event('input', { bubbles: true }));
-          item.el.dispatchEvent(new Event('change', { bubbles: true }));
-      }
-  }, { email: emailToUse, pass: passToUse });
-  
-  // Re-focus password field to ensure Enter targets the login form, not a stale banner
-  const passInput = page.locator('input[type="password"], input[name*="pass"], input#password').first();
-  await passInput.focus().catch(() => {});
-  await passInput.click().catch(() => {});
-  await new Promise(r => setTimeout(r, 200));
-  
-  // Submit via Enter key with triple-click fallback
-  await passInput.press("Enter", { delay: 100 }).catch(async () => {
-    await page.keyboard.press("Enter", { delay: 100 }).catch(() => {});
+  const result = await universalLoginFlow({
+    page,
+    siteName: targetName as "joe" | "ignition",
+    targetEmail: email,
+    password: targetName === "ignition" ? IGNITION_PASSWORD : JOE_PASSWORD,
+    attemptIdx: 0,
+    selectors: { username: "dummy", password: "dummy", submit: "dummy" },
+    inputText: async () => true, // Dummy, backend won't use it in benchmark-direct mode
+    viewport: { width: 1280, height: 800 },
+    mode: "benchmark-direct"
   });
 
-  console.log(`[${backend}] Enter pressed. Checking if it registered...`);
-  
-  // Wait 3 seconds to see if a navigation starts or form disappears
-  await new Promise(r => setTimeout(r, 3000));
-  
-  const formStillExists = await page.evaluate(() => {
-    return !!(document.querySelector('#username') || document.querySelector('input[type="email"]'));
-  }).catch(() => false);
-  
-  // Triple click fallback if enter was ignored by the SPA
-  if (formStillExists && page.url().includes("/login")) {
-    console.log(`[${backend}] Enter key failed to submit the form, falling back to triple click...`);
-    const submitBtn = page.locator('button[type="submit"], button:has-text("Login"), button:has-text("Log In"), button:has-text("Sign In"), .login-btn').first();
-    const btnCount = await submitBtn.count();
-    if (btnCount > 0) {
-      for (let i = 0; i < 3; i++) {
-          await submitBtn.click({ force: true, timeout: 1000 }).catch(() => {});
-          await new Promise(r => setTimeout(r, 100));
-      }
-    } else {
-      console.log(`[${backend}] ERROR: Could not find submit button for triple click!`);
-    }
+  if (!result.success) {
+    throw new Error(`Login success not detected (networkVerdict: ${result.networkVerdict})`);
   }
-  
-  console.log(`[${backend}] Submitted. Waiting for success...`);
   
   // Use SPA-aware success detection
   await waitForLoginSuccess(page, backend, TIMEOUT_MS);

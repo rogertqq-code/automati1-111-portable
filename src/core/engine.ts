@@ -51,6 +51,10 @@ import {
   setupSubmitMutationObserver,
   waitForSubmitMutationResult,
 } from "../targets/login-flow.js";
+import {
+  installEarlyRememberMeHook,
+  universalLoginFlow,
+} from "../targets/universal-login.js";
 import { verifyLoginSuccessVisually } from "../hermes/visual-verifier.js";
 import {
   maybePostSubmitScroll,
@@ -5354,70 +5358,7 @@ export class AutomationEngine extends EventEmitter {
     // --- ASYNC EARLY REMEMBER ME CLICK (strict-early-remember-me) ---
     // Injected BEFORE navigation so it executes the very first second the element hits the DOM,
     // even before the page has fully loaded.
-    await page.addInitScript(() => {
-      window.addEventListener('DOMContentLoaded', () => {
-        let clicked = false;
-        const observer = new MutationObserver(() => {
-          if (clicked) return;
-          // 1. Try to find by id/name/data-testid
-          let targetEl: HTMLElement | null = null;
-          const checkboxes = document.querySelectorAll('input[type="checkbox"]');
-          for (const el of Array.from(checkboxes)) {
-            const cb = el as HTMLInputElement;
-            if ((cb.id && cb.id.toLowerCase().includes('remember')) || 
-                (cb.name && cb.name.toLowerCase().includes('remember')) ||
-                (cb.getAttribute('data-testid') && cb.getAttribute('data-testid')?.toLowerCase().includes('remember'))) {
-              targetEl = cb;
-              break;
-            }
-          }
-          
-          // 2. Try to find by label text if not found
-          if (!targetEl) {
-            const labels = document.querySelectorAll('label');
-            for (const el of Array.from(labels)) {
-              const label = el as HTMLLabelElement;
-              if (label.textContent && label.textContent.toLowerCase().includes('remember')) {
-                targetEl = label;
-                break;
-              }
-            }
-          }
-
-          if (targetEl && targetEl.offsetParent !== null) {
-            // Check if it's already checked (if it's an input)
-            if (targetEl.tagName.toLowerCase() === 'input' && (targetEl as HTMLInputElement).checked) {
-              clicked = true;
-              observer.disconnect();
-              return;
-            }
-
-            // Dispatch full bubbling events to satisfy React/SPA frameworks
-            const delay = Math.floor(Math.random() * (150 - 60 + 1)) + 60;
-            const mousedownEvent = new MouseEvent('mousedown', { view: window, bubbles: true, cancelable: true, buttons: 1 });
-            targetEl.dispatchEvent(mousedownEvent);
-
-            setTimeout(() => {
-              const mouseupEvent = new MouseEvent('mouseup', { view: window, bubbles: true, cancelable: true, buttons: 0 });
-              targetEl!.dispatchEvent(mouseupEvent);
-              
-              const clickEvent = new MouseEvent('click', { view: window, bubbles: true, cancelable: true, buttons: 1 });
-              targetEl!.dispatchEvent(clickEvent);
-              
-              if (targetEl!.tagName.toLowerCase() === 'input') {
-                const changeEvent = new Event('change', { bubbles: true });
-                targetEl!.dispatchEvent(changeEvent);
-              }
-              console.log("[Automati] Early Remember Me checked instantly via DOM hook (TrustedEvents, " + delay + "ms latency).");
-            }, delay);
-            
-            clicked = true;
-            observer.disconnect();
-          }
-        });
-        observer.observe(document.documentElement, { childList: true, subtree: true });
-      });
-    }).catch(() => {});
+    await installEarlyRememberMeHook(page);
 
     // ── Navigate to login page (with fallback & retry) ──
     let origin: string;
@@ -5610,27 +5551,29 @@ export class AutomationEngine extends EventEmitter {
           await flowStep("Setup Submit Mutation Observer", "engine.ts:setupSubmitObserver", async () => setupSubmitMutationObserver(page, selectors.submit, selectors.username));
           
           if (site.name === "joe" || site.name === "ignition") {
-            this.log("DEBUG", `[FLOW DEBUG] ⏳ Starting executeUnifiedLoginChoreography`);
+            this.log("DEBUG", `[FLOW DEBUG] ⏳ Starting universalLoginFlow`);
             const result = await Promise.race([
               this.executeFlowStep(
-                "Execute Unified Login Choreography",
+                "Execute Universal Login Flow",
                 "engine.ts:5084",
-                async () => executeUnifiedLoginChoreography({
+                async () => universalLoginFlow({
                   page,
-                  siteName: site.name,
-                  selectors,
+                  siteName: site.name as "joe" | "ignition",
                   targetEmail,
                   password: pw!,
                   attemptIdx,
+                  selectors,
                   inputText: (p, sel, val) => this.inputText(p, sel, val),
                   simulateAutofill: (p, eSel, pSel, e, pass) => simulateAutofill(p, eSel, pSel, e, pass),
                   useVisionCoordinates: !!this.config?.useVisionCoordinates,
                   viewport: vp,
+                  backend: effectiveBackend ?? this.config?.backend ?? "unknown",
+                  mode: "stealth-humanized"
                 })
               ),
               new Promise<any>((_, rej) => setTimeout(() => rej(new Error("Choreography timeout")), 45000))
             ]);
-            this.log("DEBUG", `[FLOW DEBUG] ✅ Completed executeUnifiedLoginChoreography`);
+            this.log("DEBUG", `[FLOW DEBUG] ✅ Completed universalLoginFlow`);
             success = result.success;
             if (result.networkVerdict && result.networkVerdict !== "success") {
               // Payload Classification Gate returned a definitive non-success verdict. Short-circuit immediately.

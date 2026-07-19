@@ -7,6 +7,7 @@ import { BrowserTiler } from "../../src/services/browser-tiler.js";
 import { type Page } from "playwright-core";
 import fs from "fs";
 import path from "path";
+import { installEarlyRememberMeHook, universalLoginFlow } from "../../src/targets/universal-login.js";
 
 // Guard against Playwright's FFBrowserContext crash (known bug with Camoufox)
 process.on("uncaughtException", (err) => {
@@ -114,6 +115,9 @@ async function runGoldenFlow(backend: string, proxyPool?: string): Promise<Sessi
     page.setDefaultNavigationTimeout(TIMEOUT_MS);
   }
 
+  // Async Early Remember Me click hook installed BEFORE navigation
+  await installEarlyRememberMeHook(page);
+
   console.log(`[${backend}] Navigating to ${IGNITION_URL}...`);
   
   // Navigate with retry to handle transient DNS/proxy failures
@@ -131,52 +135,23 @@ async function runGoldenFlow(backend: string, proxyPool?: string): Promise<Sessi
   if (!navOk) {
     throw new Error("All navigation URLs failed");
   }
+  console.log(`[${backend}] Starting universalLoginFlow...`);
   
-  console.log(`[${backend}] Waiting for DOM to settle...`);
-  await new Promise(r => setTimeout(r, 3000));
-  
-  // ── Cascade CMP Dismissal (Rule §6) ──────────────────────────────────────
-  // Cookie banners steal focus and intercept Enter keypresses on Camoufox.
-  // Dismiss via: Native API → UI Click → CSS Hide
-  await page.evaluate(() => {
-    try { (window as any).CookieInformation?.submitAllCategories?.(); } catch {}
-  }).catch(() => {});
-  // UI click fallback — try multiple known selectors
-  for (const sel of ['.coi-banner__accept', '[data-coi-btn="accept"]', 'button:has-text("ACCEPT ALL")', 'button:has-text("Accept All")']) {
-    try {
-      const btn = page.locator(sel).first();
-      if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
-        await btn.click({ timeout: 2000 });
-        console.log(`[${backend}] Dismissed cookie banner via: ${sel}`);
-        break;
-      }
-    } catch {}
+  const result = await universalLoginFlow({
+    page,
+    siteName: "ignition",
+    targetEmail: EMAIL,
+    password: PASSWORD,
+    attemptIdx: 0,
+    selectors: { username: "dummy", password: "dummy", submit: "dummy" },
+    inputText: async () => true,
+    viewport: { width: 1280, height: 800 },
+    mode: "benchmark-direct"
+  });
+
+  if (!result.success) {
+    throw new Error(`Login success not detected (networkVerdict: ${result.networkVerdict})`);
   }
-  // CSS hide fallback
-  await page.evaluate(() => {
-    for (const el of document.querySelectorAll('.coi-banner, .coi-consent-banner, [id*="cookie"], [class*="cookie-banner"]')) {
-      (el as HTMLElement).style.setProperty('display', 'none', 'important');
-    }
-  }).catch(() => {});
-  await new Promise(r => setTimeout(r, 500));
-  
-  // Wait for email input to be visible before interacting
-  const emailInput = page.locator('input[type="email"], input[name*="email"], input#email, #username').first();
-  await emailInput.waitFor({ state: "visible", timeout: 30000 });
-  
-  // Fill email
-  await emailInput.fill(EMAIL);
-  // Fill pass
-  const passInput = page.locator('input[type="password"], input[name*="pass"], input#password').first();
-  await passInput.waitFor({ state: "visible", timeout: 10000 });
-  await passInput.fill(PASSWORD);
-  
-  // Re-focus password field to ensure Enter targets the login form, not a stale banner
-  await passInput.click().catch(() => {});
-  await new Promise(r => setTimeout(r, 200));
-  
-  // Submit via Enter key (per rule: DO NOT click Submit)
-  await page.keyboard.press("Enter");
   
   console.log(`[${backend}] Submitted. Waiting for success...`);
   

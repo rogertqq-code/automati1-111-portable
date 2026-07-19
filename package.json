@@ -26,6 +26,7 @@
     "lint": "eslint src/**/*.ts tests/**/*.ts",
     "test:mutate": "npx stryker run",
     "test:tile": "npx tsx tests/live/golden-tile-test.ts",
+    "calibrate": "npx tsx src/scripts/calibrate-coordinates.ts",
     "test:tile:ignition": "npx tsx tests/live/ignition-tile-test.ts",
     "test:tile:mega": "npx tsx tests/live/mega-tile-test.ts",
     "review": "npx tsx src/hermes/hermes-review.ts",
