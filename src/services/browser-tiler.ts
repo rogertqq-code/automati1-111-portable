@@ -389,9 +389,8 @@ export class BrowserTiler {
         // However, we CAN use osascript to 'activate' (bring to front) without accessibility rights!
         if (!nativeTilingSuccess && process.platform === "darwin") {
            log.info(`macOS detected. Using AppleScript to bring browser to front (no accessibility required)...`);
-           const appName = config.stealthEngine === "camoufox" && (opts.backend === 'stealth' || opts.backend === 'stealth-headed') 
-              ? "Camoufox" 
-              : "Chromium";
+           const isCamoufox = isStealth; // For now we assume all stealth backends on macOS use Camoufox
+           const appName = isCamoufox ? "Camoufox" : "Chromium";
            try {
                require('child_process').execSync(`osascript -e 'tell application "${appName}" to activate'`, { stdio: 'ignore' });
            } catch (e) {

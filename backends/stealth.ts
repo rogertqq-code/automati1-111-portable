@@ -148,23 +148,8 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
   if (!headlessEffective) {
     slot = await acquireHeadedSlot();
     const bounds = await gridBounds(slot);
-    // Camoufox allows window configuration natively:
-    browserConfig.window = {
-      width: bounds.width,
-      height: bounds.height,
-    };
-    // Also store bounds for the page resize pass
-    (browserConfig)._initialBounds = bounds;
-
-    // Issue 8: Force Camoufox to natively tile without fighting macOS
-    // Camoufox enforces its window size to match the spoofed screen fingerprint.
-    // By overriding the screen fingerprint to exactly match our grid tile size,
-    // Camoufox will natively construct a perfectly sized window.
-    // Camoufox allows window configuration natively:
-    browserConfig.window = {
-      width: bounds.width,
-      height: bounds.height,
-    };
+    browserConfig.window = [bounds.width, bounds.height];
+    browserConfig.args = ["-width", String(bounds.width), "-height", String(bounds.height)];
     // Also store bounds for the page resize pass
     (browserConfig)._initialBounds = bounds;
 
@@ -190,28 +175,37 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
 
     if (process.platform === 'darwin') {
        try {
-           // We explicitly force a custom user profile dir so we can pre-seed it with our xulstore.json
-           // Camoufox natively supports passing a custom string to `profile` property
-           const profileDir = path.join(process.cwd(), 'data', 'temp_profiles', `stealth_profile_${Date.now()}_${Math.floor(Math.random() * 10000)}`);
-           if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
+           // We explicitly bypass macOS accessibility restrictions by injecting a custom WebExtension
+           // that calls browser.windows.update() internally to resize the physical window natively!
+           const extDir = path.join(process.cwd(), 'data', 'temp_profiles', `resizer_ext_${Date.now()}`);
+           if (!fs.existsSync(extDir)) fs.mkdirSync(extDir, { recursive: true });
            
-           const xulstorePath = path.join(profileDir, 'xulstore.json');
-           const xulData = {
-               "chrome://browser/content/browser.xhtml": {
-                   "main-window": {
-                       "screenX": Math.floor(bounds.x).toString(),
-                       "screenY": Math.floor(bounds.y).toString(),
-                       "width": Math.floor(bounds.width).toString(),
-                       "height": Math.floor(bounds.height).toString(),
-                       "sizemode": "normal"
-                   }
-               }
-           };
-           fs.writeFileSync(xulstorePath, JSON.stringify(xulData), 'utf8');
-           browserConfig.profile = profileDir; // Inject the pre-seeded profile!
-           log.info(`[${sessionId}] macOS Profile Injection Tiling active. Pre-seeded xulstore.json at ${profileDir}`);
+           fs.writeFileSync(path.join(extDir, 'manifest.json'), JSON.stringify({
+               "manifest_version": 2,
+               "name": "Automati Resizer",
+               "version": "1.0",
+               "background": {
+                   "scripts": ["background.js"]
+               },
+               "permissions": ["windows"]
+           }), 'utf8');
+           
+           fs.writeFileSync(path.join(extDir, 'background.js'), `
+               browser.windows.getCurrent().then(win => {
+                   browser.windows.update(win.id, { 
+                       left: ${Math.floor(bounds.x)}, 
+                       top: ${Math.floor(bounds.y)}, 
+                       width: ${Math.floor(bounds.width)}, 
+                       height: ${Math.floor(bounds.height)} 
+                   });
+               });
+           `, 'utf8');
+           
+           if (!browserConfig.addons) browserConfig.addons = [];
+           browserConfig.addons.push(extDir);
+           log.info(`[${sessionId}] macOS WebExtension Tiling active. Injected resizer addon at ${extDir}`);
        } catch (e: any) {
-           log.warn(`[${sessionId}] Failed to inject xulstore.json for macOS tiling: ${e.message}`);
+           log.warn(`[${sessionId}] Failed to inject WebExtension for macOS tiling: ${e.message}`);
        }
     }
   } else {
@@ -221,10 +215,8 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
     // non-human by any anti-bot viewport check. The official docs explicitly
     // warn against fixed window sizes, but 1x1 is catastrophically detectable.
     browserConfig.headless = false;
-    browserConfig.window = {
-      width: 1280,
-      height: 720,
-    };
+    browserConfig.window = [1280, 720];
+    browserConfig.args = ["-width", "1280", "-height", "720"];
     (browserConfig)._initialBounds = { x: -2000, y: -2000, width: 1280, height: 720 };
   }
 
