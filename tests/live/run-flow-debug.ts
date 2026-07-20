@@ -441,7 +441,7 @@ async function verifyCashier(page: Page, baseUrl: string): Promise<boolean> {
     } catch {
       console.log("[GOLDEN] networkidle timed out, falling back to domcontentloaded");
       try {
-        await page.goto(cashierUrl, { timeout: 1500, waitUntil: "domcontentloaded" });
+        await page.goto(cashierUrl, { timeout: 15000, waitUntil: "domcontentloaded" });
       } catch {
         console.log("[GOLDEN] Cashier navigation failed entirely");
         return false;
