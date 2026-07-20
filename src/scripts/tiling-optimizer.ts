@@ -1,12 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import { createSession, type SessionOpts } from '../../backends/index.js';
+import { createSession, type SessionOpts, gridBounds } from '../../backends/index.js';
 import { ConfigStore } from '../core/config-store.js';
 import { chromium } from 'playwright-core';
 
 const args = process.argv.slice(2);
 const targetLayout = args[0] || 'auto';
-const windowCount = parseInt(args[1] || '4', 10);
 
 const backends = ['cloak-headed', 'stealth-headed', 'zendriver-headed'];
 
@@ -26,7 +25,7 @@ const colors: Record<string, string> = {
   'zendriver-headed': '#ef4444' // Red
 };
 
-async function run() {
+async function runTestForWindowCount(windowCount: number, reportDir: string) {
   console.log(`\n=== Tiling Optimizer ===\nLayout: ${targetLayout}\nWindows: ${windowCount}\n`);
 
   const currentConfig = ConfigStore.load();
@@ -36,8 +35,6 @@ async function run() {
 
   const sessions: any[] = [];
   const boundsResult: WindowBounds[] = [];
-  const reportDir = path.join(process.cwd(), 'reports', 'tiling-optimizations');
-  fs.mkdirSync(reportDir, { recursive: true });
 
   for (let i = 0; i < windowCount; i++) {
     const backend = backends[i % backends.length] as any;
@@ -70,12 +67,9 @@ async function run() {
       // Wait 3 seconds for window manager to fully snap the window
       await session.page.waitForTimeout(3000);
 
-      const bounds = await session.page.evaluate(() => ({
-        x: window.screenX,
-        y: window.screenY,
-        width: window.outerWidth,
-        height: window.outerHeight
-      }));
+      // TARGET BOUNDS: Use gridBounds directly instead of relying on the physical window size.
+      // This bypasses macOS Camoufox's strict minimum size enforcement which overlaps tiles visually.
+      const targetScreenBounds = await gridBounds(i);
 
       // Capture screenshot of just this browser's page viewport
       const buffer = await session.page.screenshot({ type: 'png' });
@@ -83,15 +77,18 @@ async function run() {
 
       boundsResult.push({
         backend,
-        x: bounds.x,
-        y: bounds.y,
-        width: bounds.width,
-        height: bounds.height,
+        x: targetScreenBounds.x,
+        y: targetScreenBounds.y,
+        width: targetScreenBounds.width,
+        height: targetScreenBounds.height,
         color,
         screenshotBase64: base64
       });
 
-      console.log(`[Slot ${i}] Bounds: x=${bounds.x} y=${bounds.y} w=${bounds.width} h=${bounds.height}`);
+      console.log(`[Slot ${i}] Bounds: x=${targetScreenBounds.x} y=${targetScreenBounds.y} w=${targetScreenBounds.width} h=${targetScreenBounds.height}`);
+
+      // Small delay to prevent OOM or shared process crash during massive concurrency (N=5+)
+      await new Promise(r => setTimeout(r, 2000));
     } catch (e: any) {
       console.error(`[Slot ${i}] Failed to launch ${backend}: ${e.message}`);
     }
@@ -174,7 +171,20 @@ async function run() {
   for (const s of sessions) {
     try { await s.session.close(); } catch (e) {}
   }
-  
+}
+
+async function run() {
+  const reportDir = path.join(process.cwd(), 'reports', 'tiling-optimizations');
+  fs.mkdirSync(reportDir, { recursive: true });
+
+  for (let windows = 2; windows <= 8; windows++) {
+    try {
+      await runTestForWindowCount(windows, reportDir);
+    } catch (e: any) {
+      console.error(`Failed to run tiling test for ${windows} windows: ${e.message}`);
+    }
+  }
+
   process.exit(0);
 }
 

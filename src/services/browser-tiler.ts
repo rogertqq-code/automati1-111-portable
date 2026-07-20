@@ -385,9 +385,18 @@ export class BrowserTiler {
         }
 
         // ── macOS AppleScript Tiling (DEPRECATED) ──
-        // We no longer use osascript because it requires admin Accessibility rights
+        // We no longer use osascript to resize because it requires admin Accessibility rights.
+        // However, we CAN use osascript to 'activate' (bring to front) without accessibility rights!
         if (!nativeTilingSuccess && process.platform === "darwin") {
-           log.info(`macOS detected. Skipping AppleScript. Relying on Native CDP or JS Injection based on config.`);
+           log.info(`macOS detected. Using AppleScript to bring browser to front (no accessibility required)...`);
+           const appName = config.stealthEngine === "camoufox" && (opts.backend === 'stealth' || opts.backend === 'stealth-headed') 
+              ? "Camoufox" 
+              : "Chromium";
+           try {
+               require('child_process').execSync(`osascript -e 'tell application "${appName}" to activate'`, { stdio: 'ignore' });
+           } catch (e) {
+               // ignore
+           }
         }
 
         // ── node-window-manager fallback (Issue 8 — Firefox/Camoufox tiling fix) ──

@@ -1,6 +1,6 @@
 {
   "backend": "darwin",
-  "concurrency": 4,
+  "concurrency": 5,
   "inputMode": "instant",
   "allowHumanTyping": false,
   "alwaysClickRememberMe": true,
