@@ -135,6 +135,27 @@ async function runGoldenFlow(backend: string, targetName: string = "joe", proxyP
   // Async Early Remember Me click hook installed BEFORE navigation
   await installEarlyRememberMeHook(page);
 
+  console.log(`[${backend}] Navigating to demo.fingerprint.com/playground to capture suspect score...`);
+  let suspectScore: number | string = "N/A";
+  try {
+    await page.goto("https://demo.fingerprint.com/playground", { waitUntil: "domcontentloaded", timeout: 20000 }).catch(async () => {
+      await page.goto("https://demo.fingerprint.com/playground", { waitUntil: "domcontentloaded", timeout: 20000 });
+    });
+    await page.waitForFunction(
+      () => (document.body.innerText || '').match(/suspect\s*score/i),
+      { timeout: 10000 }
+    ).catch(() => {});
+    const allText: string = await page.evaluate("document.body.innerText || ''");
+    const match = allText.match(/Suspect Score[:\s]*(\d+)/i) || allText.match(/suspect_score:\s*(\d+)/i);
+    if (match) {
+      suspectScore = parseInt(match[1] ?? '0');
+    }
+  } catch (e: any) {
+    console.warn(`[${backend}] Failed to capture suspect score: ${e.message}`);
+  }
+  
+  console.log(`[${backend}] 🔍 Suspect Score: ${suspectScore}`);
+
   console.log(`[${backend}] Navigating to ${urlsToTry[0]}...`);
   
   // Navigate with retry to handle transient DNS/proxy failures
@@ -322,9 +343,9 @@ async function main() {
           await h.close().catch(() => {});
         }
         nukeAllBrowsers();
-        console.log(`✅ Golden Tile Test completed perfectly for ${targetName}.`);
+        console.log(`✅ Golden Tile Test completed perfectly.`);
       } else {
-        console.error(`Attempt ${attempt} failed for ${targetName}. Cleaning up...`);
+        console.error(`Attempt ${attempt} failed. Cleaning up...`);
         for (const h of handles) {
           await h.close().catch(() => {});
         }
@@ -332,7 +353,7 @@ async function main() {
         await new Promise(r => setTimeout(r, 2000));
         
         if (attempt === MAX_ATTEMPTS) {
-          console.error(`❌ Max attempts (${MAX_ATTEMPTS}) reached for ${targetName}. Best result: ${successCount}/4.`);
+          console.error(`❌ Max attempts (${MAX_ATTEMPTS}) reached. Best result: ${successCount}/4.`);
           process.exit(1);
         }
       }
