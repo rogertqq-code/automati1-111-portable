@@ -100,7 +100,10 @@ async function runGoldenFlow(backend: string, targetName: string, targetUrl: str
   let navOk = false;
   for (const url of [targetUrl]) {
     try {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 }).catch(async () => {
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 45000 });
+      });
+      await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
       navOk = true;
       break;
     } catch (e: any) {

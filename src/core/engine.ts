@@ -4154,7 +4154,9 @@ export class AutomationEngine extends EventEmitter {
         // Blueprint: Dual-Phase Page Load Watchdog (Spec 4)
         if (i === 1) {
           try {
-            return await page.goto(url, { waitUntil: "networkidle", timeout: 7000 });
+            const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 });
+            await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+            return res;
           } catch (e: unknown) {
             const msg = ((e instanceof Error ? e.message : String(e)) || String(e)).toLowerCase();
             if (msg.includes("err_invalid_auth_credentials") || msg.includes("err_proxy_auth") ||
@@ -4164,13 +4166,17 @@ export class AutomationEngine extends EventEmitter {
               throw new PreemptiveBlockError((e instanceof Error ? e.message : String(e)));
             }
             if (msg.includes("timeout")) {
-              this.log("WARN", `  Phase 1 Watchdog (7s) triggered, executing Phase 2 reload...`);
-              return await page.reload({ waitUntil: "networkidle", timeout: 60000 });
+              this.log("WARN", `  Phase 1 Watchdog triggered, executing Phase 2 reload...`);
+              const res = await page.reload({ waitUntil: "domcontentloaded", timeout: 30000 });
+              await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+              return res;
             }
             throw e;
           }
         }
-        return await page.goto(url, { waitUntil: "networkidle", timeout: 60000 });
+        const res = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30000 });
+        await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+        return res;
       } catch (e: unknown) {
         lastErr = e;
         const msg = ((e instanceof Error ? e.message : String(e)) || String(e)).toLowerCase();

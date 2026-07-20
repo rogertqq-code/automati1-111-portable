@@ -181,7 +181,7 @@ async function fillCredentials(page: Page): Promise<boolean> {
   let passSel = "#password";
 
   try {
-    await page.waitForSelector(userSel, { state: "visible", timeout: 8000 });
+    await page.waitForSelector(userSel, { state: "visible", timeout: 4000 });
   } catch {
     // Fallback: try input[type="email"]
     try {
@@ -441,7 +441,7 @@ async function verifyCashier(page: Page, baseUrl: string): Promise<boolean> {
     } catch {
       console.log("[GOLDEN] networkidle timed out, falling back to domcontentloaded");
       try {
-        await page.goto(cashierUrl, { timeout: 15000, waitUntil: "domcontentloaded" });
+        await page.goto(cashierUrl, { timeout: 1500, waitUntil: "domcontentloaded" });
       } catch {
         console.log("[GOLDEN] Cashier navigation failed entirely");
         return false;
@@ -530,7 +530,7 @@ async function main(): Promise<void> {
     for (const url of JOE_URLS) {
       console.log(`[GOLDEN] Navigating to ${url}...`);
       try {
-        await page.goto(url, { waitUntil: "networkidle", timeout: 30000 });
+        await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25000 }).catch(async () => { await page.goto(url, { waitUntil: "domcontentloaded", timeout: 25000 }); }); await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
         // Verify it's not a chrome-error page
         if (!page.url().includes("chrome-error")) {
           navSuccess = true;
@@ -547,7 +547,7 @@ async function main(): Promise<void> {
     
     // --- ASYNC EARLY REMEMBER ME CLICK (strict-early-remember-me) ---
     console.log(`[GOLDEN] Waiting for 'Remember Me' to appear asynchronously...`);
-    page.getByText("Remember Me", { exact: false }).waitFor({ state: "visible", timeout: 15000 })
+    page.getByText("Remember Me", { exact: false }).waitFor({ state: "visible", timeout: 1500 })
       .then(() => page.getByText("Remember Me", { exact: false }).click({ timeout: 1000 }))
       .catch(() => {});
 
@@ -569,7 +569,7 @@ async function main(): Promise<void> {
         const calib = JSON.parse(fs.readFileSync(calibPath, "utf-8"))["joefortune"];
         if (calib && calib.selectorPath) {
           console.log(`[GOLDEN] Waiting for exact cookie banner path...`);
-          const btn = await page.waitForSelector(calib.selectorPath, { state: 'visible', timeout: 15000 }).catch(() => null);
+          const btn = await page.waitForSelector(calib.selectorPath, { state: 'visible', timeout: 1500 }).catch(() => null);
           if (btn) {
             await btn.click({ force: true });
             console.log(`[GOLDEN] Γ£à Cookie Banner dismissed via exact selector.`);

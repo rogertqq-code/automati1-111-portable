@@ -265,9 +265,14 @@ export class BrowserTiler {
     } else {
       // "auto" mode: Aspect-Aware Smart Grid
       if (screen.width > screen.height) {
-         // Landscape monitor: Favor columns to push viewports into portrait ratio
-         rows = Math.max(1, Math.floor(Math.sqrt(windowsPerMonitor)));
-         cols = Math.ceil(windowsPerMonitor / rows);
+         if (windowsPerMonitor === 4) {
+             rows = 1;
+             cols = 4;
+         } else {
+             // Landscape monitor: Favor columns to push viewports into portrait ratio
+             rows = Math.max(1, Math.floor(Math.sqrt(windowsPerMonitor)));
+             cols = Math.ceil(windowsPerMonitor / rows);
+         }
       } else {
          // Portrait monitor: Favor rows
          cols = Math.max(1, Math.floor(Math.sqrt(windowsPerMonitor)));
