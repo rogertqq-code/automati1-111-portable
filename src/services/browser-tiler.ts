@@ -98,26 +98,38 @@ export class BrowserTiler {
       return null;
     }
 
-    const monitors = windowManager.getMonitors();
-    if (monitors.length === 0) return null;
-
-    // Distribute slots across multiple monitors
-    const windowsPerMonitor = Math.ceil(this.totalWindows / monitors.length);
-    const monitorIndex = Math.min(Math.floor(slot / windowsPerMonitor), monitors.length - 1);
-    const localSlot = slot % windowsPerMonitor;
-    const monitor = monitors[monitorIndex];
-    if (!monitor) return null;
+    let monitors = windowManager.getMonitors();
+    let screen = { x: 0, y: 0, width: 1920, height: 1080 };
     
-    // Improvement 3: Dynamic Taskbar Compensation
-    // node-window-manager returns the raw resolution. We reserve the bottom 48px to emulate SPI_GETWORKAREA
-    const TASKBAR_HEIGHT = 48;
-    const rawScreen = monitor.getBounds();
-    const screen = {
-       x: rawScreen?.x ?? 0,
-       y: rawScreen?.y ?? 0,
-       width: rawScreen?.width ?? 1920,
-       height: Math.max(10, (rawScreen?.height ?? 1080) - TASKBAR_HEIGHT)
-    };
+    let windowsPerMonitor = this.totalWindows;
+    let localSlot = slot;
+    
+    if (monitors.length > 0) {
+        // Distribute slots across multiple monitors
+        windowsPerMonitor = Math.ceil(this.totalWindows / monitors.length);
+        const monitorIndex = Math.min(Math.floor(slot / windowsPerMonitor), monitors.length - 1);
+        localSlot = slot % windowsPerMonitor;
+        const monitor = monitors[monitorIndex];
+        if (monitor) {
+            const rawScreen = monitor.getBounds();
+            const TASKBAR_HEIGHT = process.platform === "win32" ? 48 : 0;
+            screen = {
+               x: rawScreen?.x ?? 0,
+               y: rawScreen?.y ?? 0,
+               width: rawScreen?.width ?? 1920,
+               height: Math.max(10, (rawScreen?.height ?? 1080) - TASKBAR_HEIGHT)
+            };
+        }
+    } else if (process.platform === 'darwin') {
+        try {
+            // Fallback for macOS accessibility block
+            const raw = execFileSync("system_profiler", ["SPDisplaysDataType"]).toString();
+            const m = raw.match(/Resolution:\s*(\d+)\s*x\s*(\d+)/);
+            if (m) {
+                screen = { x: 0, y: 31, width: parseInt(m[1], 10), height: parseInt(m[2], 10) - 31 }; // Account for 31px Apple menu bar
+            }
+        } catch {}
+    }
     
     if (this.totalWindows <= 1) {
       return { x: screen.x, y: screen.y, width: screen.width, height: screen.height };

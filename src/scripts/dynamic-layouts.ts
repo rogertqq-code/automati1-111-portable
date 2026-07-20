@@ -166,15 +166,15 @@ async function run() {
     // Configure global tiler just to satisfy initial headed-grid launch (we'll override dynamically anyway)
     globalTiler.reconfigure(NUM_WINDOWS, { cols: 4, rows: 2 });
     
-    console.log(`[Phase 1] Launching all ${NUM_WINDOWS} windows...`);
-    for (let i = 0; i < NUM_WINDOWS; i++) {
+    console.log(`[Phase 1] Launching all ${NUM_WINDOWS} windows concurrently...`);
+    const launchPromises = Array.from({ length: NUM_WINDOWS }).map(async (_, i) => {
         const backend = ENGINES[i];
         const color = COLORS[i % COLORS.length];
-        console.log(`Spawning ${backend}...`);
-        
         try {
             const s = await createSession({ id: `dyn-${i}`, backend: backend as any, mode: 'headed-grid' });
-            sessions.push({ session: s, backend });
+            
+            // Go to a real URL so WebExtension content scripts inject properly (they ignore data: and about:blank)
+            await s.page.goto('http://example.com', { waitUntil: 'domcontentloaded' }).catch(() => {});
             
             const html = `
                 <html>
@@ -184,10 +184,17 @@ async function run() {
                     </body>
                 </html>
             `;
-            await s.page.goto(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+            await s.page.setContent(html).catch(() => {});
+            return { session: s, backend };
         } catch (e: any) {
             console.error(`Failed to launch slot ${i}:`, e.message);
+            return null;
         }
+    });
+
+    const results = await Promise.all(launchPromises);
+    for (const r of results) {
+        if (r) sessions.push(r);
     }
 
     console.log(`\n[Phase 2] Initializing dynamic rotation! Stand back and watch the screen...`);
