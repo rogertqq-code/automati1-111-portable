@@ -26,7 +26,8 @@ async def main():
         browser_args = [
             "--disable-features=PasswordCheckup",
             "--password-store=basic",
-            "--test-type"
+            "--test-type",
+            "--disable-blink-features=AutomationControlled"
         ]
         if proxy_str:
             browser_args.append(f"--proxy-server={proxy_str}")

@@ -23,7 +23,7 @@ export interface HardwareProfile {
 /** Windows GPU pool — NVIDIA RTX, AMD Radeon, Intel UHD/Arc are all common. */
 const HARDWARE_PRESETS_WINDOWS: HardwareProfile[] = [
   { cores: 4, memory: 8, gpu: { vendor: "Intel", renderer: "UHD Graphics 630" } },
-  { cores: 6, memory: 8, gpu: { vendor: "Intel", renderer: "UHD Graphics 750" } },
+  { cores: 8, memory: 16, gpu: { vendor: "Intel", renderer: "UHD Graphics 750" } },
   { cores: 8, memory: 16, gpu: { vendor: "NVIDIA", renderer: "GeForce GTX 1650" } },
   { cores: 8, memory: 16, gpu: { vendor: "Intel", renderer: "Iris Pro Graphics 580" } },
   { cores: 12, memory: 32, gpu: { vendor: "AMD", renderer: "Radeon RX 6600" } },
@@ -41,7 +41,7 @@ const HARDWARE_PRESETS_MACOS: HardwareProfile[] = [
   { cores: 12, memory: 32, gpu: { vendor: "Apple", renderer: "Apple M3 Pro" } },
   { cores: 16, memory: 32, gpu: { vendor: "Apple", renderer: "Apple M3 Max" } },
   { cores: 4, memory: 8, gpu: { vendor: "Intel", renderer: "Intel Iris Plus Graphics 645" } },
-  { cores: 6, memory: 16, gpu: { vendor: "Intel", renderer: "Intel UHD Graphics 630" } },
+  { cores: 8, memory: 16, gpu: { vendor: "Intel", renderer: "Intel UHD Graphics 630" } },
   { cores: 8, memory: 16, gpu: { vendor: "AMD", renderer: "AMD Radeon Pro 5300M" } },
 ];
 
@@ -95,13 +95,17 @@ export function getConsistentHardware(
   const maxMemory = Math.max(...pool.map(p => p.memory));
 
   if (proxyPool === "4m") {
-    // Mobile IP: ideally 4-8 cores, 4-8 GB RAM, but clamped to what the hardware preset allows
-    baseProfile.cores = Math.max(minCores, Math.min(maxCores, hash % 2 === 0 ? 4 : 8));
-    baseProfile.memory = Math.max(minMemory, Math.min(maxMemory, hash % 3 === 0 ? 4 : 8));
+    // Mobile IP: ideally 4-8 cores, 4-8 GB RAM
+    const pairs = [{ cores: 4, memory: 8 }, { cores: 8, memory: 8 }, { cores: 8, memory: 16 }];
+    const pair = pairs[hash % pairs.length];
+    baseProfile.cores = Math.max(minCores, Math.min(maxCores, pair.cores));
+    baseProfile.memory = Math.max(minMemory, Math.min(maxMemory, pair.memory));
   } else if (proxyPool === "4r" || proxyPool === "4i" || proxyPool === "1") {
     // Residential/ISP Desktop IP: ideally 8-16 cores, 16-32 GB RAM
-    baseProfile.cores = Math.max(minCores, Math.min(maxCores, hash % 2 === 0 ? 8 : 16));
-    baseProfile.memory = Math.max(minMemory, Math.min(maxMemory, hash % 3 === 0 ? 16 : 32));
+    const pairs = [{ cores: 8, memory: 16 }, { cores: 12, memory: 32 }, { cores: 16, memory: 32 }];
+    const pair = pairs[hash % pairs.length];
+    baseProfile.cores = Math.max(minCores, Math.min(maxCores, pair.cores));
+    baseProfile.memory = Math.max(minMemory, Math.min(maxMemory, pair.memory));
   }
 
   return baseProfile;

@@ -28,7 +28,8 @@ async def main():
             "--window-size=1280,720",
             "--disable-features=PasswordCheckup",
             "--password-store=basic",
-            "--test-type"
+            "--test-type",
+            "--disable-blink-features=AutomationControlled"
         ]
         if proxy_str:
             browser_args.append(f"--proxy-server={proxy_str}")

@@ -162,10 +162,10 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
         browserConfig.fingerprint = {};
       }
       browserConfig.fingerprint.screen = {
-        width: Math.floor(bounds.width),
-        height: Math.floor(bounds.height),
-        availWidth: Math.floor(bounds.width),
-        availHeight: Math.floor(bounds.height),
+        width: 1920,
+        height: 1080,
+        availWidth: 1920,
+        availHeight: 1040,
         availTop: 0,
         availLeft: 0,
         colorDepth: 24,

@@ -212,9 +212,6 @@ export async function createZendriverSession(opts: SessionOpts): Promise<Session
       // 1. Remove navigator.webdriver at the CDP level (most robust method)
       await cdpSession.send('Page.addScriptToEvaluateOnNewDocument', {
         source: `
-          // Delete webdriver flag
-          Object.defineProperty(navigator, 'webdriver', { get: () => false });
-          
           // Spoof chrome object for non-Chrome environments
           if (!window.chrome) {
             window.chrome = { runtime: {}, loadTimes: function() { return {}; }, csi: function() { return {}; } };

@@ -2,7 +2,7 @@ import { createSession } from "./backends/index.js";
 import fs from "fs";
 
 async function dumpFp() {
-  const backend = "stealth-headed";
+  const backend = process.argv[2] || "stealth-headed";
   console.log(`Starting ${backend} for FP dump...`);
   const opts = {
     backend: backend as any,

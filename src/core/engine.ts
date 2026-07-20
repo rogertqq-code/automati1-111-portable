@@ -54,7 +54,10 @@ import {
   waitForSubmitMutationResult,
 } from "../targets/login-flow.js";
 import {
+  fillCreditCardFields,
+  handleCaptcha,
   installEarlyRememberMeHook,
+  installEarlyCookieDismissHook,
   universalLoginFlow,
 } from "../targets/universal-login.js";
 import { verifyLoginSuccessVisually } from "../hermes/visual-verifier.js";
@@ -5377,6 +5380,7 @@ export class AutomationEngine extends EventEmitter {
     // Injected BEFORE navigation so it executes the very first second the element hits the DOM,
     // even before the page has fully loaded.
     await installEarlyRememberMeHook(page);
+    await installEarlyCookieDismissHook(page);
 
     // ── Navigate to login page (with fallback & retry) ──
     let origin: string;

@@ -18,13 +18,15 @@ export const WEBDRIVER_OVERRIDE_SCRIPT = `
         apply: function() { return false; }
       });
       Object.defineProperty(Navigator.prototype, 'webdriver', origDesc);
-    } else {
+    } else if (origDesc) {
       Object.defineProperty(Navigator.prototype, 'webdriver', {
         get: function() { return false; },
         configurable: true,
         enumerable: true,
       });
     }
+    // If origDesc doesn't exist at all, the engine is properly patched (or it's Firefox).
+    // We do NOT inject it manually, as defining it leaves a tampering trace.
 
     // Make CredentialContainer.get appear functional (real browsers have this)
     if (navigator.credentials) {
