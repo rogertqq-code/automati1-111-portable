@@ -7,7 +7,7 @@ import { BrowserTiler } from "../../src/services/browser-tiler.js";
 import { type Page } from "playwright-core";
 import fs from "fs";
 import path from "path";
-import { installEarlyRememberMeHook, universalLoginFlow } from "../../src/targets/universal-login.js";
+import { installEarlyRememberMeHook, installEarlyCookieDismissHook, universalLoginFlow } from "../../src/targets/universal-login.js";
 
 // Guard against Playwright's FFBrowserContext crash (known bug with Camoufox)
 process.on("uncaughtException", (err) => {
@@ -132,7 +132,8 @@ async function runGoldenFlow(backend: string, targetName: string = "joe", proxyP
     ? [IGNITION_URL, "https://www.ignitioncasino.com/login"] 
     : [JOE_URL];
 
-  // Async Early Remember Me click hook installed BEFORE navigation
+  // Async Early hooks installed BEFORE navigation
+  await installEarlyCookieDismissHook(page);
   await installEarlyRememberMeHook(page);
 
   console.log(`[${backend}] Navigating to demo.fingerprint.com/playground to capture suspect score...`);
@@ -197,6 +198,40 @@ async function runGoldenFlow(backend: string, targetName: string = "joe", proxyP
   
   // Use SPA-aware success detection
   await waitForLoginSuccess(page, backend, TIMEOUT_MS);
+  
+  if (targetName === "joe") {
+    console.log(`[${backend}] ✅ Joe Fortune logged in successfully. Immediately navigating to Ignition...`);
+    const igUrl = "https://www.ignitioncasino.ooo/login";
+    try {
+      await page.goto(igUrl, { waitUntil: "domcontentloaded", timeout: 45000 }).catch(async () => {
+        await page.goto(igUrl, { waitUntil: "domcontentloaded", timeout: 45000 });
+      });
+      await page.waitForLoadState("networkidle", { timeout: 5000 }).catch(() => {});
+      
+      console.log(`[${backend}] Starting universalLoginFlow for ignition...`);
+      const igResult = await universalLoginFlow({
+        page,
+        siteName: "ignition",
+        targetEmail: IGNITION_EMAIL,
+        password: IGNITION_PASSWORD,
+        attemptIdx: 0,
+        selectors: { username: "dummy", password: "dummy", submit: "dummy" },
+        inputText: async () => true,
+        viewport: { width: 1280, height: 800 },
+        mode: "benchmark-direct"
+      });
+      
+      if (!igResult.success) {
+        throw new Error(`Ignition login success not detected (networkVerdict: ${igResult.networkVerdict})`);
+      }
+      
+      await waitForLoginSuccess(page, backend, TIMEOUT_MS);
+      console.log(`[${backend}] ✅ Ignition logged in successfully after Joe.`);
+    } catch (e: any) {
+      console.warn(`[${backend}] ❌ Failed to login to Ignition after Joe: ${e.message}`);
+      throw e;
+    }
+  }
   
   return handle;
 }

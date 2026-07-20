@@ -81,14 +81,14 @@ export async function startProxyForwarder(upstream: ForwardProxyEntry, _clientPr
       socket.setTimeout(3000);
       socket.on("timeout", () => {
         socket.destroy();
-        if (!res.headersSent) res.writeHead(504);
-        res.end("upstream tarpit timeout");
+        req.destroy();
+        res.destroy();
       });
     });
 
     upstreamReq.on("error", () => {
-      if (!res.headersSent) res.writeHead(502);
-      res.end("proxy forwarder error");
+      req.destroy();
+      res.destroy();
     });
     req.on("error", () => {
       upstreamReq.destroy();
@@ -115,7 +115,7 @@ export async function startProxyForwarder(upstream: ForwardProxyEntry, _clientPr
     const clientSock = clientSocket as unknown as net.Socket;
     const target = req.url;
     if (!target) {
-      try { clientSocket.end("HTTP/1.1 400 Bad Request\r\n\r\n"); } catch { /* intentional */ }
+      clientSocket.destroy();
       return;
     }
 
@@ -175,7 +175,7 @@ export async function startProxyForwarder(upstream: ForwardProxyEntry, _clientPr
         upstreamSocket.pipe(clientSocket);
         clientSocket.pipe(upstreamSocket);
       } catch (err) {
-        try { clientSocket.end("HTTP/1.1 502 Bad Gateway\r\n\r\n"); } catch { /* intentional */ }
+        clientSocket.destroy();
       }
       return;
     }
@@ -211,7 +211,7 @@ export async function startProxyForwarder(upstream: ForwardProxyEntry, _clientPr
     upstreamSocket.setTimeout(3000);
     upstreamSocket.on("timeout", () => {
       upstreamSocket.destroy();
-      try { clientSocket.end("HTTP/1.1 504 Gateway Timeout\r\n\r\n"); } catch { /* intentional */ }
+      clientSocket.destroy();
     });
 
     let buffered = Buffer.alloc(0);

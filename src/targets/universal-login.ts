@@ -84,6 +84,57 @@ export async function installEarlyRememberMeHook(page: Page) {
 }
 
 /**
+ * Early hook to instantly dismiss cookie banners the millisecond they appear in the DOM.
+ * Executes the 3-tier cascade (API -> Click -> CSS Hide) on every DOM mutation safely.
+ */
+export async function installEarlyCookieDismissHook(page: Page) {
+  await page.addInitScript(() => {
+    // Only run heavily every 100ms to avoid thrashing CPU on mutations
+    let lastRun = 0;
+    const observer = new MutationObserver(() => {
+      const now = Date.now();
+      if (now - lastRun < 100) return;
+      lastRun = now;
+      
+      try {
+        // Tier 1: Native API
+        try { (window as any).CookieInformation?.submitAllCategories?.(); } catch {}
+        
+        // Tier 2: UI Click
+        const keywords = ["ACCEPT ALL", "Accept All", "ACCEPT", "Accept", "Got it", "Agree"];
+        const cssSelectors = [".coi-banner__accept", '[data-coi-btn="accept"]', ".cookie-notice-button", ".cookie-banner-close", "button:has-text('Accept All Cookies')"];
+        
+        cssSelectors.forEach(sel => {
+          document.querySelectorAll(sel).forEach(el => (el as HTMLElement).click());
+        });
+        
+        document.querySelectorAll('button, a').forEach(btn => {
+          const text = (btn as HTMLElement).innerText || "";
+          if (keywords.some(k => text.includes(k))) {
+            (btn as HTMLElement).click();
+          }
+        });
+        
+        // Tier 3: CSS Hide
+        document.querySelectorAll('.coi-banner__overlay, .cookie-overlay, [class*="cookie"]').forEach(el => {
+          (el as HTMLElement).style.setProperty('display', 'none', 'important');
+        });
+      } catch {}
+    });
+    
+    // Check immediately upon load, and then observe
+    observer.observe(document, { childList: true, subtree: true });
+    
+    // Initial sync run
+    try {
+      document.querySelectorAll('.coi-banner__overlay, .cookie-overlay, [class*="cookie"]').forEach(el => {
+        (el as HTMLElement).style.setProperty('display', 'none', 'important');
+      });
+    } catch {}
+  }).catch(() => {});
+}
+
+/**
  * Universal Login Flow
  * Handles: Cookie Banners -> Early Remember Me -> Coordinate/Standard Login -> Submission -> Verification
  */
@@ -101,71 +152,6 @@ export async function universalLoginFlow(options: UniversalLoginOptions): Promis
   
   // Give React a moment to attach event handlers after form appears
   await new Promise(r => setTimeout(r, 2000));
-
-  // 4. Synchronously dismiss cookie banners before filling
-  console.log(`[UniversalLogin] Checking for cookie banners to dismiss...`);
-  try {
-    // Attempt native API
-    await page.evaluate(() => {
-      try { (window as any).CookieInformation?.submitAllCategories?.(); } catch {}
-    }).catch(() => {});
-    
-    const keywords = ["ACCEPT ALL", "Accept All", "ACCEPT", "Accept", "Got it", "Agree"];
-    const cssSelectors = [
-      ".coi-banner__accept", 
-      '[data-coi-btn="accept"]', 
-      ".cookie-notice-button", 
-      ".cookie-banner-close",
-      "button:has-text('Accept All Cookies')",
-      "button:has-text('Got it')",
-      "button:has-text('Accept')"
-    ];
-    let clicked = false;
-    
-    // Check main page and all iframes
-    const frames = [page.mainFrame(), ...page.frames()];
-    for (const frame of frames) {
-      if (clicked) break;
-      for (const sel of cssSelectors) {
-        if (clicked) break;
-        const btns = frame.locator(sel);
-        const count = await btns.count().catch(() => 0);
-        for (let i = 0; i < count; i++) {
-          const btn = btns.nth(i);
-          if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
-            console.log(`[UniversalLogin] Found visible cookie banner in frame (sel=${sel}), clicking...`);
-            await btn.click({ force: true, timeout: 2000 }).catch(() => {});
-            clicked = true;
-            await new Promise(r => setTimeout(r, 800)); // wait for animation
-            break;
-          }
-        }
-      }
-      
-      for (const text of keywords) {
-        if (clicked) break;
-        const btns = frame.locator(`text="${text}", .coi-banner__accept, [data-coi-btn="accept"]`);
-        const count = await btns.count().catch(() => 0);
-        for (let i = 0; i < count; i++) {
-          const btn = btns.nth(i);
-          if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
-            console.log(`[UniversalLogin] Found visible cookie banner in frame (text=${text}), clicking...`);
-            await btn.click({ force: true, timeout: 2000 }).catch(() => {});
-            clicked = true;
-            await new Promise(r => setTimeout(r, 800)); // wait for animation
-            break;
-          }
-        }
-      }
-    }
-    // Also forcefully hide the overlay via CSS just in case
-    await page.evaluate(() => {
-      const overlays = document.querySelectorAll('.coi-banner__overlay, .cookie-overlay, [class*="cookie"]');
-      overlays.forEach(el => {
-        (el as HTMLElement).style.setProperty('display', 'none', 'important');
-      });
-    }).catch(() => {});
-  } catch {}
 
   const coords = getCoordinateMap(siteName);
 
