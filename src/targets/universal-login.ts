@@ -110,31 +110,52 @@ export async function universalLoginFlow(options: UniversalLoginOptions): Promis
       try { (window as any).CookieInformation?.submitAllCategories?.(); } catch {}
     }).catch(() => {});
     
-    // Try calibrated click first (most reliable for tricky overlays)
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      const calibPath = path.join(process.cwd(), "data", "cookie-calibration.json");
-      if (fs.existsSync(calibPath)) {
-        const calibs = JSON.parse(fs.readFileSync(calibPath, "utf-8"));
-        const calib = calibs[siteName] || calibs["joefortune"];
-        if (calib && calib.coordinates) {
-          console.log(`[UniversalLogin] Executing calibrated coordinate click for cookie banner (X=${calib.coordinates.x}, Y=${calib.coordinates.y})`);
-          await page.mouse.click(calib.coordinates.x, calib.coordinates.y);
-          await new Promise(r => setTimeout(r, 800)); // wait for animation
+    const keywords = ["ACCEPT ALL", "Accept All", "ACCEPT", "Accept", "Got it", "Agree"];
+    const cssSelectors = [
+      ".coi-banner__accept", 
+      '[data-coi-btn="accept"]', 
+      ".cookie-notice-button", 
+      ".cookie-banner-close",
+      "button:has-text('Accept All Cookies')",
+      "button:has-text('Got it')",
+      "button:has-text('Accept')"
+    ];
+    let clicked = false;
+    
+    // Check main page and all iframes
+    const frames = [page.mainFrame(), ...page.frames()];
+    for (const frame of frames) {
+      if (clicked) break;
+      for (const sel of cssSelectors) {
+        if (clicked) break;
+        const btns = frame.locator(sel);
+        const count = await btns.count().catch(() => 0);
+        for (let i = 0; i < count; i++) {
+          const btn = btns.nth(i);
+          if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
+            console.log(`[UniversalLogin] Found visible cookie banner in frame (sel=${sel}), clicking...`);
+            await btn.click({ force: true, timeout: 2000 }).catch(() => {});
+            clicked = true;
+            await new Promise(r => setTimeout(r, 800)); // wait for animation
+            break;
+          }
         }
       }
-    } catch (e) {}
-
-    const btnLoc = page.locator('.coi-banner__accept, [data-coi-btn="accept"], text="ACCEPT ALL", text="Accept All", text="Accept", text="Got it"');
-    const count = await btnLoc.count().catch(() => 0);
-    for (let i = 0; i < count; i++) {
-      const btn = btnLoc.nth(i);
-      if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
-        console.log(`[UniversalLogin] Found visible cookie banner, clicking...`);
-        await btn.click({ force: true, timeout: 1000 }).catch(() => {});
-        await new Promise(r => setTimeout(r, 800)); // wait for animation
-        break;
+      
+      for (const text of keywords) {
+        if (clicked) break;
+        const btns = frame.locator(`text="${text}", .coi-banner__accept, [data-coi-btn="accept"]`);
+        const count = await btns.count().catch(() => 0);
+        for (let i = 0; i < count; i++) {
+          const btn = btns.nth(i);
+          if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
+            console.log(`[UniversalLogin] Found visible cookie banner in frame (text=${text}), clicking...`);
+            await btn.click({ force: true, timeout: 2000 }).catch(() => {});
+            clicked = true;
+            await new Promise(r => setTimeout(r, 800)); // wait for animation
+            break;
+          }
+        }
       }
     }
     // Also forcefully hide the overlay via CSS just in case

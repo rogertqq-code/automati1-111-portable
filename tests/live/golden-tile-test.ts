@@ -288,21 +288,21 @@ async function main() {
       let successCount = 0;
       const handles: SessionHandle[] = [];
       
-      for (let i = 0; i < results.length; i++) {
-        const res = results[i];
-        if (res.status === 'fulfilled') {
+      results.forEach((res, i) => {
+        const combo = backends[i];
+        if (res.status === "fulfilled") {
           successCount++;
           handles.push(res.value);
-          console.log(`  ✅ ${backends[i]}: PASS`);
+          console.log(`  ✅ ${combo.id}: PASS`);
         } else {
-          console.log(`  ❌ ${backends[i]}: FAIL — ${res.reason?.message?.slice(0, 120) || 'unknown'}`);
+          console.log(`  ❌ ${combo.id}: FAIL — ${res.reason?.message?.slice(0, 120) || 'unknown'}`);
         }
-      }
+      });
       
-      console.log(`\nResult for ${targetName}: ${successCount}/4 backends succeeded.`);
+      console.log(`\nResult: ${successCount}/4 backends succeeded.`);
       
       if (successCount === 4) {
-        console.log(`All 4 backends logged in successfully for ${targetName}!`);
+        console.log(`All 4 backends logged in successfully!`);
         
         // Give them a moment to render the final state
         await new Promise(r => setTimeout(r, 3000));
@@ -311,11 +311,11 @@ async function main() {
         const handlePairs: { handle: SessionHandle; backend: string }[] = [];
         for (let i = 0; i < results.length; i++) {
           if (results[i].status === 'fulfilled') {
-            handlePairs.push({ handle: (results[i] as PromiseFulfilledResult<SessionHandle>).value, backend: backends[i] });
+            handlePairs.push({ handle: (results[i] as PromiseFulfilledResult<SessionHandle>).value, backend: backends[i].id });
           }
         }
         
-        const screenshotPath = path.resolve(process.cwd(), `desktop-verification-${targetName}.png`);
+        const screenshotPath = path.resolve(process.cwd(), `desktop-verification-variety.png`);
         await captureAndCompositeTiledScreenshot(handlePairs, screenshotPath);
         
         for (const h of handles) {
