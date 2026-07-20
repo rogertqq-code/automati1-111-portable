@@ -102,10 +102,12 @@ export async function installEarlyCookieDismissHook(page: Page) {
         
         // Tier 2: UI Click
         const keywords = ["ACCEPT ALL", "Accept All", "ACCEPT", "Accept", "Got it", "Agree"];
-        const cssSelectors = [".coi-banner__accept", '[data-coi-btn="accept"]', ".cookie-notice-button", ".cookie-banner-close", "button:has-text('Accept All Cookies')"];
+        const cssSelectors = [".coi-banner__accept", '[data-coi-btn="accept"]', ".cookie-notice-button", ".cookie-banner-close"];
         
         cssSelectors.forEach(sel => {
-          document.querySelectorAll(sel).forEach(el => (el as HTMLElement).click());
+          try {
+            document.querySelectorAll(sel).forEach(el => (el as HTMLElement).click());
+          } catch {}
         });
         
         document.querySelectorAll('button, a').forEach(btn => {

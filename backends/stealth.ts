@@ -107,8 +107,8 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
     headless,
     geoip: false,         // Disabled: SOCKS5 proxy IP validation times out (Rule 35)
     humanize: humanizeMaxSeconds,  // Per-session cursor speed from interaction profile
-    block_webrtc: true,   // CRITICAL: Prevent real IP leak via STUN/TURN (Issue 1)
-    block_images: true,   // Native engine-level image blocking — faster & undetectable vs route interception (Issue 3)
+    block_webrtc: (opts as any).allowTrackers ? false : true,   // CRITICAL: Prevent real IP leak via STUN/TURN (Issue 1)
+    block_images: (opts as any).allowTrackers ? false : true,   // Native engine-level image blocking — faster & undetectable vs route interception (Issue 3)
     os: uaProfile?.os === 'macos' ? 'macos' : uaProfile?.os === 'linux' ? 'linux' : 'windows',
     i_know_what_im_doing: true,
     // ── Issue 8b: Unlock window.moveTo/resizeTo for tiling ──

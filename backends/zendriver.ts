@@ -212,33 +212,15 @@ export async function createZendriverSession(opts: SessionOpts): Promise<Session
       // 1. Remove navigator.webdriver at the CDP level (most robust method)
       await cdpSession.send('Page.addScriptToEvaluateOnNewDocument', {
         source: `
-          // Spoof chrome object for non-Chrome environments
-          if (!window.chrome) {
-            window.chrome = { runtime: {}, loadTimes: function() { return {}; }, csi: function() { return {}; } };
-          }
-          
           // Remove Playwright/CDP/Selenium traces
           delete window.__playwright;
           delete window.__pw_manual;
           delete window.__PW_outOfContext;
-          const cdcProps = Object.getOwnPropertyNames(window).filter(p => p.includes('cdc_') || p.includes('wd_'));
+          const cdcProps = Object.getOwnPropertyNames(window).filter(p => p.includes('cdc_') || p.includes('wd_') || p.includes('__selenium') || p.includes('__webdriver') || p.includes('__driver') || p.includes('__fxdriver'));
           for (const p of cdcProps) { try { delete window[p]; } catch { /* intentional */ } }
           
-          // Mask the devtools presence (prevents DevTools=Yes detection)
-          // Override the devtools detection methods
-          const originalGetOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
           // Prevent firebug detection
           if (window.Firebug) delete window.Firebug;
-          
-          // Hide the fact that dev tools are open
-          Object.defineProperty(window, '__selenium_evaluate', { get: () => undefined });
-          Object.defineProperty(window, '__webdriver_evaluate', { get: () => undefined });
-          Object.defineProperty(window, '__selenium_unwrapped', { get: () => undefined });
-          Object.defineProperty(window, '__webdriver_unwrapped', { get: () => undefined });
-          Object.defineProperty(window, '__driver_evaluate', { get: () => undefined });
-          Object.defineProperty(window, '__driver_unwrapped', { get: () => undefined });
-          Object.defineProperty(window, '__fxdriver_evaluate', { get: () => undefined });
-          Object.defineProperty(window, '__fxdriver_unwrapped', { get: () => undefined });
           
           // Override permissions query for notifications (automation giveaway)
           const origQuery = window.navigator.permissions?.query;

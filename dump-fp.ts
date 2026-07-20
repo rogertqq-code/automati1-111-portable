@@ -1,9 +1,21 @@
 import { createSession } from "./backends/index.js";
 import fs from "fs";
 
+// Fix for local timezone mismatch when running without proxy
+if (!process.env.DEFAULT_COUNTRY) {
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (tz === "Asia/Singapore") process.env.DEFAULT_COUNTRY = "SG";
+  else if (tz.startsWith("America/")) process.env.DEFAULT_COUNTRY = "US";
+  else if (tz.startsWith("Europe/London")) process.env.DEFAULT_COUNTRY = "GB";
+}
+
 async function dumpFp() {
-  const backend = process.argv[2] || "stealth-headed";
-  console.log(`Starting ${backend} for FP dump...`);
+  const args = process.argv.slice(2);
+  const backendArg = args.find(a => !a.startsWith('--')) || "stealth-headed";
+  const allowTrackers = args.includes('--allow-trackers');
+  
+  const backend = backendArg;
+  console.log(`Starting ${backend} for FP dump (allowTrackers=${allowTrackers})...`);
   const opts = {
     backend: backend as any,
     headless: false,
@@ -12,7 +24,8 @@ async function dumpFp() {
     cleanSession: true,
     recordVideo: false,
     useHttpCloak: true,
-    injectStealthJS: true
+    injectStealthJS: true,
+    allowTrackers
   };
   
   const handle = await createSession(opts);
