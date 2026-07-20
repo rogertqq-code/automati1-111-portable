@@ -40,7 +40,9 @@ export interface AppConfig {
   spiderApiKey?: string;
 }
 
-const CONFIG_PATH = path.join(process.cwd(), 'app-config.json');
+const CONFIG_PATH = process.env.AUTOMATI_CONFIG_PATH 
+  ? path.resolve(process.cwd(), process.env.AUTOMATI_CONFIG_PATH) 
+  : path.join(process.cwd(), 'app-config.json');
 
 const DEFAULT_CONFIG: AppConfig = {
   backend: "stealth",

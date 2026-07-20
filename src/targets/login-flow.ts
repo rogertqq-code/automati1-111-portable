@@ -233,7 +233,10 @@ async function pressEnterInPassword(page: Page, passwordSelector: string): Promi
   await page.click(passwordSelector).catch(() => { });
   await new Promise((r) => setTimeout(r, 200));
   
-  await page.keyboard.press("Enter", { delay: Math.floor(Math.random() * (120 - 50 + 1)) + 50 });
+  const holdDuration = Math.round(gaussianClamped(55, 15, 30, 80));
+  await page.keyboard.down("Enter");
+  await new Promise((r) => setTimeout(r, holdDuration));
+  await page.keyboard.up("Enter");
 }
 
 async function pressClickOnSubmit(
@@ -242,8 +245,11 @@ async function pressClickOnSubmit(
   submitBox: { x: number; y: number; width: number; height: number } | null,
 ): Promise<void> {
   if (submitBox) {
-    const offsetX = gaussianClamped(0, 1.5, -4, 4);
-    const offsetY = gaussianClamped(0, 1.5, -4, 4);
+    // Target only the center 40% of the button to avoid bot-flagging edge clicks
+    const usableWidth = submitBox.width * 0.4;
+    const usableHeight = submitBox.height * 0.4;
+    const offsetX = gaussianClamped(0, usableWidth / 4, -usableWidth / 2, usableWidth / 2);
+    const offsetY = gaussianClamped(0, usableHeight / 4, -usableHeight / 2, usableHeight / 2);
     const cx = submitBox.x + submitBox.width / 2 + offsetX;
     const cy = submitBox.y + submitBox.height / 2 + offsetY;
     await humanMouseMove(page, cx, cy);
@@ -706,7 +712,7 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
 
   // 5. Fallback Submit
   if (attemptIdx === 0) {
-      await pressTripleClickOnSubmit(page, selectors.submit);
+      await pressTripleClickOnSubmit(page, selectors.submit, selectors.username);
       const trigger = await page.evaluate(() => (window as any)._submitTrigger).catch(() => 'Unknown');
       log.info(`[Submit Tracker] Form submission triggered via: ${trigger}`);
       return { success: true, submitMethod: "triple_click" };
@@ -719,24 +725,46 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
   }
 }
 
-async function pressTripleClickOnSubmit(page: Page, submitSelector: string): Promise<void> {
-    const submitBox = await page.locator(submitSelector).boundingBox().catch(() => null);
-    if (submitBox) {
-        const cx = submitBox.x + submitBox.width / 2;
-        const cy = submitBox.y + submitBox.height / 2;
-        await humanMouseMove(page, cx, cy);
-        for (let i = 0; i < 3; i++) {
-            await page.mouse.down();
+async function pressTripleClickOnSubmit(page: Page, submitSelector: string, usernameSelector: string): Promise<void> {
+    const executeClick = async () => {
+        const submitBox = await page.locator(submitSelector).boundingBox().catch(() => null);
+        if (submitBox) {
+            // Re-use Opt 15: Targeted Coordinate Jitter for the fallback clicks too
+            const usableWidth = submitBox.width * 0.4;
+            const usableHeight = submitBox.height * 0.4;
+            const offsetX = gaussianClamped(0, usableWidth / 4, -usableWidth / 2, usableWidth / 2);
+            const offsetY = gaussianClamped(0, usableHeight / 4, -usableHeight / 2, usableHeight / 2);
+            const cx = submitBox.x + submitBox.width / 2 + offsetX;
+            const cy = submitBox.y + submitBox.height / 2 + offsetY;
+            await humanMouseMove(page, cx, cy);
+            for (let i = 0; i < 3; i++) {
+                await page.mouse.down();
+                await new Promise(r => setTimeout(r, 40));
+                await page.mouse.up();
+                await new Promise(r => setTimeout(r, 40));
+            }
+        } else {
+            await humanClickSelector(page, submitSelector, { force: true });
             await new Promise(r => setTimeout(r, 40));
-            await page.mouse.up();
+            await humanClickSelector(page, submitSelector, { force: true });
             await new Promise(r => setTimeout(r, 40));
+            await humanClickSelector(page, submitSelector, { force: true });
         }
-    } else {
-        await humanClickSelector(page, submitSelector, { force: true });
-        await new Promise(r => setTimeout(r, 40));
-        await humanClickSelector(page, submitSelector, { force: true });
-        await new Promise(r => setTimeout(r, 40));
-        await humanClickSelector(page, submitSelector, { force: true });
+    };
+
+    // Attempt 1
+    await executeClick();
+    await new Promise(r => setTimeout(r, 1500));
+    
+    // Verification Loop (Opt 12)
+    let formStillVisible = await page.locator(usernameSelector).isVisible().catch(() => false);
+    let retries = 0;
+    while (formStillVisible && retries < 2) {
+        log.warn(`[Fallback] Form still visible after fallback click. Retrying click ${retries + 1}/2...`);
+        await executeClick();
+        await new Promise(r => setTimeout(r, 2000));
+        formStillVisible = await page.locator(usernameSelector).isVisible().catch(() => false);
+        retries++;
     }
 }
 
