@@ -45,13 +45,12 @@ async function runVisualProof(numWindows: number) {
     }
     
     for (let i = 0; i < numWindows; i++) {
-        const backend = engines[i];
-        const color = COLORS[i % COLORS.length];
+        const backend = engines[i]!;
+        const color = COLORS[i % COLORS.length]!;
         console.log(`[Slot ${i}] Launching ${backend} with color ${color.name}...`);
         
         try {
             const s = await createSession({
-                id: `visual-${i}`,
                 backend: backend as any,
                 mode: 'headed-grid'
             });

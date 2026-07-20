@@ -168,7 +168,7 @@ async function run() {
         if (os.platform() === 'darwin') {
             const raw = execSync("system_profiler SPDisplaysDataType | grep Resolution").toString();
             const m = raw.match(/(\d+)\s*x\s*(\d+)/);
-            if (m) { deskW = parseInt(m[1]); deskH = parseInt(m[2]) - 31; } // Subtract 31 for Apple Menu Bar
+            if (m && m[1] && m[2]) { deskW = parseInt(m[1]); deskH = parseInt(m[2]) - 31; } // Subtract 31 for Apple Menu Bar
         }
     } catch {}
 
@@ -180,10 +180,10 @@ async function run() {
     
     console.log(`[Phase 1] Launching all ${NUM_WINDOWS} windows concurrently...`);
     const launchPromises = Array.from({ length: NUM_WINDOWS }).map(async (_, i) => {
-        const backend = ENGINES[i];
-        const color = COLORS[i % COLORS.length];
+        const backend = ENGINES[i % ENGINES.length]!;
+        const color = COLORS[i % COLORS.length]!;
         try {
-            const s = await createSession({ id: `dyn-${i}`, backend: backend as any, mode: 'headed-grid' });
+            const s = await createSession({ backend: backend as any, mode: 'headed-grid' });
             
             // Go to a real URL so WebExtension content scripts inject properly (they ignore data: and about:blank)
             await s.page.goto('http://example.com', { waitUntil: 'domcontentloaded' }).catch(() => {});
@@ -218,8 +218,8 @@ async function run() {
 
         // Issue simultaneous move commands
         const movePromises = sessions.map((sData, idx) => {
-            const targetBounds = currentLayout[idx];
-            return BrowserTiler.moveWindowDynamically(sData.session, sData.backend, targetBounds);
+            const targetBounds = currentLayout![idx];
+            return BrowserTiler.moveWindowDynamically(sData.session, sData.backend, targetBounds!);
         });
 
         await Promise.all(movePromises);

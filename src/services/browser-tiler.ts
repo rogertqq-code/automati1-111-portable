@@ -10,25 +10,6 @@ import { createLogger } from "../core/logger.js";
 
 const log = createLogger("BrowserTiler");
 
-// Improvement 4: Launch Focus Peeking Daemon (Windows-only)
-try {
-  if (process.platform === "win32") {
-    const resizerExe = path.join(process.cwd(), "resizer.exe");
-    if (fs.existsSync(resizerExe)) {
-        // Spawn detached daemon
-        const daemon = spawn(resizerExe, ["--daemon"], {
-            detached: true,
-            stdio: 'ignore'
-        });
-        daemon.on('error', (err) => {
-          log.debug(`Focus Peeking daemon error: ${err.message}`);
-        });
-        daemon.unref(); // Don't block Node.js exit
-    }
-  }
-} catch (e) {
-  log.debug(`Failed to start Focus Peeking daemon: ${e instanceof Error ? e.message : String(e)}`);
-}
 
 /**
  * Universal Browser Tiler
@@ -125,7 +106,7 @@ export class BrowserTiler {
             // Fallback for macOS accessibility block
             const raw = execFileSync("system_profiler", ["SPDisplaysDataType"]).toString();
             const m = raw.match(/Resolution:\s*(\d+)\s*x\s*(\d+)/);
-            if (m) {
+            if (m && m[1] && m[2]) {
                 screen = { x: 0, y: 31, width: parseInt(m[1], 10), height: parseInt(m[2], 10) - 31 }; // Account for 31px Apple menu bar
             }
         } catch {}
@@ -353,276 +334,119 @@ export class BrowserTiler {
   }
 
   private async _enforceWindowBounds(page: Page, bounds: ScreenBounds & { zOrder?: string, _emulateDpr?: number, _emulateMobile?: boolean } | null, _browserPid?: number, backendName?: string): Promise<void> {
-    if (!bounds) return; // OS-native mode bypasses bounds entirely
+    if (!bounds) return;
 
     const isStealth = backendName?.startsWith("stealth") ?? false;
 
-    try {
-      // 1. Native OS Manipulation via C# Executable (Flawless Windows API Hook with <10ms overhead)
-      // 1. Native OS Manipulation via C# Executable (Flawless Windows API Hook with <10ms overhead)
+    // 1. Enforce Window Position via pure Dynamic E2E architecture
+    if (isStealth) {
+      // Camoufox uses our injected WebExtension bridge via window.postMessage.
+      // NOTE: During the initial boot sequence in stealth.ts, the WebExtension
+      // already enforces the bounds on startup! We dispatch it here again just to be safe.
       try {
-        if (!page) throw new Error("Page required for title injection");
-        
-        const uniqueTitle = "Automati_Tiling_" + Date.now() + "_" + Math.floor(Math.random() * 10000);
-        log.info(`Injecting title for ${isStealth ? 'Firefox/Camoufox' : 'Chromium'} hook: ${uniqueTitle}`);
-        await page.evaluate((newTitle: string) => {
-           
-          (window as any).__originalTitle = document.title;
-          document.title = newTitle;
-        }, uniqueTitle).catch(() => {});
-        
-        // Wait for OS to register the new title via a page round-trip
-        // (deterministic: waits for Playwright evaluate to resolve rather than an arbitrary sleep)
-        await page.evaluate(() => document.title).catch(() => {});
-        
-        const zOrder = bounds.zOrder ?? "TOP";
-        const resizerExe = path.join(process.cwd(), "resizer.exe");
-        
-        let nativeTilingSuccess = false;
-        
-        if (process.platform === "win32" && fs.existsSync(resizerExe)) {
-          const out = execFileSync(resizerExe, [
-             uniqueTitle, 
-             Math.floor(bounds.x).toString(), 
-             Math.floor(bounds.y).toString(), 
-             Math.floor(bounds.width).toString(), 
-             Math.floor(bounds.height).toString(), 
-             zOrder
-          ], { encoding: "utf8" });
-          
-          log.info(`C# Native hook result: ${out.trim()}`);
-          nativeTilingSuccess = out.includes("SUCCESS");
-        } else if (process.platform === "win32") {
-           log.warn(`Native C# resizer.exe not found at ${resizerExe}`);
-        }
-
-        // ── macOS AppleScript Tiling (DEPRECATED) ──
-        // We no longer use osascript to resize because it requires admin Accessibility rights.
-        // However, we CAN use osascript to 'activate' (bring to front) without accessibility rights!
-        if (!nativeTilingSuccess && process.platform === "darwin") {
-           log.info(`macOS detected. Using AppleScript to bring browser to front (no accessibility required)...`);
-           const isCamoufox = isStealth; // For now we assume all stealth backends on macOS use Camoufox
-           const appName = isCamoufox ? "Camoufox" : "Chromium";
-           try {
-               require('child_process').execSync(`osascript -e 'tell application "${appName}" to activate'`, { stdio: 'ignore' });
-           } catch (e) {
-               // ignore
-           }
-        }
-
-        // ── node-window-manager fallback (Issue 8 — Firefox/Camoufox tiling fix) ──
-        // If resizer.exe failed or doesn't exist, use the already-imported
-        // node-window-manager to find the window by its injected title and
-        // call setBounds directly. This is the ONLY reliable method for
-        // Firefox/Camoufox since:
-        //   - CDP Browser.getWindowForTarget is Chromium-only
-        //   - window.moveTo/resizeTo is blocked by dom.disable_window_move_resize
-        // Works for Chromium too as a universal fallback.
-        if (!nativeTilingSuccess && process.platform !== "darwin") {
-          try {
-            const allWindows = windowManager.getWindows();
-            const target = allWindows.find((w: { getTitle: () => string; setBounds: (b: {x: number; y: number; width: number; height: number}) => void }) => {
-              try { return w.getTitle().includes(uniqueTitle); } catch { return false; }
-            });
-            if (target) {
-              target.setBounds({
-                x: Math.floor(bounds.x),
-                y: Math.floor(bounds.y),
-                width: Math.floor(bounds.width),
-                height: Math.floor(bounds.height),
-              });
-              log.info(`node-window-manager setBounds SUCCESS for "${uniqueTitle}" → ${bounds.width}x${bounds.height} @ (${bounds.x},${bounds.y})`);
-              nativeTilingSuccess = true;
-            } else {
-              log.warn(`node-window-manager: No window found matching title "${uniqueTitle}" (${allWindows.length} windows scanned)`);
-            }
-          } catch (nwmErr: unknown) {
-            log.warn(`node-window-manager fallback failed: ${nwmErr instanceof Error ? nwmErr.message : String(nwmErr)}`);
-          }
-        }
-        
-        // ── CDP Fallback (Chromium Only) ──
-        if (!nativeTilingSuccess && !isStealth) {
-          try {
-             if (page.context) {
-                 const context = page.context();
-                 const cdp = await context.newCDPSession(page).catch(() => null);
-                 if (cdp) {
-                     const { windowId } = await cdp.send('Browser.getWindowForTarget').catch(() => ({ windowId: null }));
-                     if (windowId) {
-                         await cdp.send('Browser.setWindowBounds', {
-                             windowId,
-                             bounds: {
-                                 windowState: 'normal',
-                                 left: Math.floor(bounds.x),
-                                 top: Math.floor(bounds.y),
-                                 width: Math.floor(bounds.width),
-                                 height: Math.floor(bounds.height)
-                             }
-                         });
-                         log.info(`CDP Browser.setWindowBounds SUCCESS for "${uniqueTitle}" → ${bounds.width}x${bounds.height} @ (${bounds.x},${bounds.y})`);
-                         nativeTilingSuccess = true;
-                     }
-                 }
-             }
-          } catch (cdpErr: any) {
-             log.warn(`CDP bounds fallback failed: ${cdpErr.message}`);
-          }
-        }
-
-        // ── Viewport Fallback (Firefox/Camoufox) ──
-        if (!nativeTilingSuccess) {
-             // Try to move it natively via JS if the profile injection didn't snap it perfectly
-             try {
-                await page.evaluate(({x, y, w, h}) => {
-                   window.moveTo(x, y);
-                   window.resizeTo(w, h);
-                }, { x: Math.floor(bounds.x), y: Math.floor(bounds.y), w: Math.floor(bounds.width), h: Math.floor(bounds.height) });
-                log.info(`JS window.moveTo/resizeTo fallback executed for ${uniqueTitle}`);
-             } catch (e: any) {
-                log.warn(`JS window.moveTo failed: ${e.message}`);
-             }
-           
-           log.warn(`All native OS window moving methods failed for ${uniqueTitle}. Falling back to internal page.setViewportSize() so screenshots are correct.`);
-           await page.setViewportSize({ width: Math.floor(bounds.width), height: Math.floor(bounds.height) }).catch(() => {});
-           nativeTilingSuccess = true; // Mark as success so the flow continues smoothly
-        }
-        
-        // Restore title
-        await page.evaluate(() => {
-          if (typeof (window as any).__originalTitle !== 'undefined') {
-            document.title = (window as any).__originalTitle;
-          }
-        }).catch(() => {});
-        
-        if (nativeTilingSuccess) {
-            // ── Post-tiling viewport enhancements (Chromium-only) ──
-            // These CDP + addInitScript overrides are SKIPPED for stealth (Camoufox)
-            // because Camoufox manages window.screen, outerWidth, outerHeight at the
-            // C++ engine level. Layering JS overrides creates Frankenstein profiles
-            // (Rule 39: strict-no-frankenstein-fingerprints).
-            if (!isStealth) {
-              try {
-                if (page.context) {
-                   const context = page.context();
-                   const cdp = await context.newCDPSession(page).catch(() => null);
-                   if (cdp) {
-                     // Anti-Breakage CSS, Orientation Change, Scrollbar Randomization & Screen Property Fuzzing
-                     await page.addInitScript((injectedBounds: ScreenBounds & { _emulateMobile?: boolean } | null) => {
-                       const style = document.createElement('style');
-                       const scrollbarWidth = Math.floor(Math.random() * 8) + 8; // 8px to 16px
-                       
-                       style.innerHTML = `
-                           body, html { min-width: 100vw !important; max-width: 100vw !important; overflow-x: hidden !important; }
-                           ::-webkit-scrollbar { width: ${scrollbarWidth}px !important; }
-                       `;
-                       document.addEventListener('DOMContentLoaded', () => document.head.appendChild(style));
-                       
-                       let lastWidth = window.innerWidth;
-                       window.addEventListener('resize', () => {
-                          if ((lastWidth < window.innerHeight && window.innerWidth > window.innerHeight) || 
-                              (lastWidth > window.innerHeight && window.innerWidth < window.innerHeight)) {
-                              window.dispatchEvent(new Event('orientationchange'));
-                          }
-                          lastWidth = window.innerWidth;
-                       });
-
-                       // Screen Property Fuzzing — ONLY for explicit mobile emulation
-                       // For regular grid tiling, the real monitor screen dimensions MUST be
-                       // preserved. Setting screen.width to a 370px tile cell creates a
-                       // Frankenstein profile (desktop Chrome UA + mobile screen.width = bot flag).
-                       if (injectedBounds && injectedBounds._emulateMobile) {
-                           const fuzzedScreen = {
-                               width: injectedBounds.width,
-                               height: injectedBounds.height,
-                               availWidth: injectedBounds.width,
-                               availHeight: injectedBounds.height,
-                               colorDepth: 24,
-                               pixelDepth: 24,
-                               orientation: { type: injectedBounds.width > injectedBounds.height ? "landscape-primary" : "portrait-primary", angle: 0 }
-                           };
-                           
-                           Object.defineProperty(window, 'screen', {
-                               get: () => fuzzedScreen
-                           });
-                           
-                           // Mask outer dimensions to match inner when mimicking mobile
-                           Object.defineProperty(window, 'outerWidth', { get: () => window.innerWidth });
-                           Object.defineProperty(window, 'outerHeight', { get: () => window.innerHeight });
-                       }
-                     }, bounds).catch(() => {});
-
-                     // Dynamic Mobile / Touch Emulation (Chromium CDP only)
-                     // ONLY when explicitly requested by chaos/viewport layout — NEVER auto-detect from width
-                     // Auto-detection at width < 600 was corrupting all headed audits (grid cells are ~370px)
-                     if (bounds._emulateMobile) {
-                         log.info(`Explicit mobile emulation requested for bounds ${bounds.width}px. Enabling Touch & UA.`);
-                         await cdp.send('Emulation.setDeviceMetricsOverride', {
-                             width: 0, // 0 = inherit from OS window
-                             height: 0,
-                             deviceScaleFactor: bounds._emulateDpr || 2.5,
-                             mobile: true
-                         }).catch(() => {});
-                         
-                         await cdp.send('Emulation.setTouchEmulationEnabled', {
-                             enabled: true,
-                             maxTouchPoints: 5
-                         }).catch(() => {});
-                         
-                         await cdp.send('Network.setUserAgentOverride', {
-                             userAgent: 'Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36',
-                             platform: 'Android'
-                         }).catch(() => {});
-                     }
-                   }
-                }
-              } catch (e) {
-                log.debug(`Failed to inject CDP Viewport Emulation: ${String(e)}`);
-              }
-            } else {
-              log.info(`Skipping CDP/screen overrides for stealth backend (Camoufox manages these natively)`);
-            }
-            return; // Successfully tiled
-          }
-      } catch (e) {
-        log.warn(`Native tiling hook failed, falling back to CDP/JS: ${e instanceof Error ? e.message : String(e)}`);
+        await page.evaluate((b) => {
+          window.postMessage({ type: "NATIVE_RESIZE", bounds: b }, "*");
+        }, bounds);
+        log.info(`Dispatched WebExtension resize for Camoufox -> ${bounds.width}x${bounds.height} @ (${bounds.x},${bounds.y})`);
+      } catch (err) {
+        log.warn(`Dynamic WebExtension resize failed for Camoufox: ${err}`);
       }
-
-    // 2. Chromium CDP Fallback (skipped for Firefox/Juggler — not implemented)
-    if (!isStealth) {
+    } else {
+      // Chromium uses CDP
       try {
         const client = await page.context().newCDPSession(page);
         const { windowId } = await client.send('Browser.getWindowForTarget');
         await client.send('Browser.setWindowBounds', {
           windowId,
-          bounds: {
-            left: bounds.x,
-            top: bounds.y,
-            width: bounds.width,
-            height: bounds.height,
-            windowState: 'normal'
+          bounds: { 
+            left: Math.floor(bounds.x), 
+            top: Math.floor(bounds.y), 
+            width: Math.floor(bounds.width), 
+            height: Math.floor(bounds.height), 
+            windowState: 'normal' 
           }
         });
-        client.detach().catch(() => {});
-        return;
-      } catch (e) {
-        // Falls through to JS fallback
+        await client.detach().catch(() => {});
+        log.info(`Dispatched CDP resize for Chromium -> ${bounds.width}x${bounds.height} @ (${bounds.x},${bounds.y})`);
+      } catch (e: any) {
+        log.warn(`CDP bounds fallback failed: ${e.message}`);
       }
     }
 
-    // 3. Firefox/JS Fallback — window.moveTo/resizeTo
-    // NOTE: For Camoufox, this only works if firefoxUserPrefs has
-    // 'dom.disable_window_move_resize': false (set in stealth.ts).
-    try {
-      await page.evaluate((b: {x: number, y: number, w: number, h: number}) => {
-        window.moveTo(b.x, b.y);
-        window.resizeTo(b.w, b.h);
-      }, {x: bounds.x, y: bounds.y, w: bounds.width, h: bounds.height}).catch(() => {});
-    } catch (fallbackErr) {
-      log.warn(`Failed to enforce window bounds via all methods: ${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)}`);
-    }
-    } finally {
-      // Empty, no longer need Mutex!
+    // 2. Post-tiling viewport enhancements (Chromium-only)
+    // These CDP + addInitScript overrides are SKIPPED for stealth (Camoufox)
+    // because Camoufox manages window.screen, outerWidth, outerHeight at the
+    // C++ engine level. Layering JS overrides creates Frankenstein profiles.
+    if (!isStealth) {
+      try {
+        if (page.context) {
+           const context = page.context();
+           const cdp = await context.newCDPSession(page).catch(() => null);
+           if (cdp) {
+             // Anti-Breakage CSS, Orientation Change, Scrollbar Randomization & Screen Property Fuzzing
+             await page.addInitScript((injectedBounds: ScreenBounds & { _emulateMobile?: boolean } | null) => {
+               const style = document.createElement('style');
+               const scrollbarWidth = Math.floor(Math.random() * 8) + 8; // 8px to 16px
+               
+               style.innerHTML = `
+                   body, html { min-width: 100vw !important; max-width: 100vw !important; overflow-x: hidden !important; }
+                   ::-webkit-scrollbar { width: ${scrollbarWidth}px !important; }
+               `;
+               document.addEventListener('DOMContentLoaded', () => document.head.appendChild(style));
+               
+               let lastWidth = window.innerWidth;
+               window.addEventListener('resize', () => {
+                  if ((lastWidth < window.innerHeight && window.innerWidth > window.innerHeight) || 
+                      (lastWidth > window.innerHeight && window.innerWidth < window.innerHeight)) {
+                      window.dispatchEvent(new Event('orientationchange'));
+                  }
+                  lastWidth = window.innerWidth;
+               });
+
+               if (injectedBounds && injectedBounds._emulateMobile) {
+                   const fuzzedScreen = {
+                       width: injectedBounds.width,
+                       height: injectedBounds.height,
+                       availWidth: injectedBounds.width,
+                       availHeight: injectedBounds.height,
+                       colorDepth: 24,
+                       pixelDepth: 24,
+                       orientation: { type: injectedBounds.width > injectedBounds.height ? "landscape-primary" : "portrait-primary", angle: 0 }
+                   };
+                   
+                   Object.defineProperty(window, 'screen', {
+                       get: () => fuzzedScreen
+                   });
+                   
+                   Object.defineProperty(window, 'outerWidth', { get: () => window.innerWidth });
+                   Object.defineProperty(window, 'outerHeight', { get: () => window.innerHeight });
+               }
+             }, bounds).catch(() => {});
+
+             if (bounds._emulateMobile) {
+                 log.info(`Explicit mobile emulation requested for bounds ${bounds.width}px. Enabling Touch & UA.`);
+                 await cdp.send('Emulation.setDeviceMetricsOverride', {
+                     width: 0, 
+                     height: 0,
+                     deviceScaleFactor: bounds._emulateDpr || 2.5,
+                     mobile: true
+                 }).catch(() => {});
+                 
+                 await cdp.send('Emulation.setTouchEmulationEnabled', {
+                     enabled: true,
+                     maxTouchPoints: 5
+                 }).catch(() => {});
+                 
+                 await cdp.send('Network.setUserAgentOverride', {
+                     userAgent: 'Mozilla/5.0 (Linux; Android 13; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36',
+                     platform: 'Android'
+                 }).catch(() => {});
+             }
+           }
+        }
+      } catch (e) {
+        log.debug(`Failed to inject CDP Viewport Emulation: ${String(e)}`);
+      }
     }
   }
 
