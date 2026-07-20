@@ -39,8 +39,20 @@ function getLayouts(desktopW: number, desktopH: number): ScreenBounds[][] {
     // Helper to push a valid array of exactly NUM_WINDOWS bounds
     const addLayout = (b: ScreenBounds[]) => {
         // Pad or slice to exactly NUM_WINDOWS
-        while (b.length < NUM_WINDOWS) b.push({ ...b[b.length - 1] });
-        layouts.push(b.slice(0, NUM_WINDOWS));
+        let padIdx = 0;
+        while (b.length < NUM_WINDOWS) {
+            // Neatly stack leftover windows off to the side so they don't awkwardly cover things
+            b.push({ x: (padIdx * 50), y: 31, width: 200, height: 200 });
+            padIdx++;
+        }
+        
+        // Offset all y-coordinates by 31 to avoid the macOS menu bar
+        const adjusted = b.slice(0, NUM_WINDOWS).map(pos => ({
+            ...pos,
+            y: pos.y + 31
+        }));
+        
+        layouts.push(adjusted);
     };
 
     // 1. Classic 4x2 Grid (Top-to-bottom, Left-to-right)
@@ -151,12 +163,12 @@ async function run() {
     await gracefulKill();
 
     // Get true screen size from OS (fallback to 1920x1080)
-    let deskW = 1920; let deskH = 1080;
+    let deskW = 1920; let deskH = 1080 - 31;
     try {
         if (os.platform() === 'darwin') {
             const raw = execSync("system_profiler SPDisplaysDataType | grep Resolution").toString();
             const m = raw.match(/(\d+)\s*x\s*(\d+)/);
-            if (m) { deskW = parseInt(m[1]); deskH = parseInt(m[2]); }
+            if (m) { deskW = parseInt(m[1]); deskH = parseInt(m[2]) - 31; } // Subtract 31 for Apple Menu Bar
         }
     } catch {}
 

@@ -652,7 +652,13 @@ export class BrowserTiler {
         const { windowId } = await client.send('Browser.getWindowForTarget');
         await client.send('Browser.setWindowBounds', {
           windowId,
-          bounds: { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height, windowState: 'normal' }
+          bounds: { 
+            left: Math.floor(bounds.x), 
+            top: Math.floor(bounds.y), 
+            width: Math.floor(bounds.width), 
+            height: Math.floor(bounds.height), 
+            windowState: 'normal' 
+          }
         });
         await client.detach().catch(() => {});
         log.info(`Dispatched CDP resize for Chromium -> ${bounds.width}x${bounds.height} @ (${bounds.x},${bounds.y})`);
