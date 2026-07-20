@@ -4,6 +4,7 @@ import { finalizeLocalRecording, headedQuarantine, acquireHeadlessContext, track
 import { loadSpiderSettings, ProxyProtocol } from "../src/core/spider-settings.js";
 import { disableBookmarksBar } from "../src/services/browser-tiler.js";
 import { proxyEntryKey } from "../src/proxy/proxy-score-tracker.js";
+import { ConfigStore } from "../src/core/config-store.js";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -94,7 +95,8 @@ async function createCloakSession(opts: SessionOpts): Promise<SessionHandle> {
   ];
 
   // Resolve viewport before branches
-  const mode = (headlessEffective ? (opts.liveTest ? "headless-live" : "headless") : (opts.liveTest || HEADED_GRID_SIZE === 1 ? "headed-live" : "headed-grid"));
+  const configConcurrency = ConfigStore.load().concurrency;
+  const mode = (headlessEffective ? (opts.liveTest ? "headless-live" : "headless") : (configConcurrency > 1 ? "headed-grid" : "headed-live"));
   let slot: number | undefined;
   let sBounds: ScreenBounds | undefined;
   if (!headlessEffective) {

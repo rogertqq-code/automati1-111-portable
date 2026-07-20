@@ -1,6 +1,6 @@
 {
   "backend": "darwin",
-  "concurrency": 1,
+  "concurrency": 4,
   "inputMode": "instant",
   "allowHumanTyping": false,
   "alwaysClickRememberMe": true,
@@ -20,12 +20,15 @@
   "advEmulateMobile": false,
   "injectStealthJS": false,
   "recordVideo": false,
+  "enablePlaywrightTracing": false,
   "postLoadDelay": 0,
   "enableVerification": true,
   "useHttpCloak": true,
   "stealthBypassHttpCloak": true,
   "proxyRotateUrl": "",
-  "tilingLayout": "horizontal",
+  "tilingLayout": "auto",
+  "macOSTilingEngine": "native-cdp",
+  "enableAgentObservation": false,
   "goldenCredentials": {
     "joe": "phuttasopit@hotmail.co.th:Tomo06032553",
     "ignition": "Mattdonor@yahoo.com:Dada0707#"

@@ -41,7 +41,9 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
   const startMs = Date.now();
 
   const isLinux = process.platform === "linux";
+  const configConcurrency = ConfigStore.load().concurrency;
   const headlessEffective = opts.liveTest ? false : (opts.headless ?? (isLinux ? "virtual" : true));
+  const mode = (headlessEffective ? (opts.liveTest ? "headless-live" : "headless") : (configConcurrency > 1 ? "headed-grid" : "headed-live"));
   const headless: boolean | "virtual" = headlessEffective;
 
   // ── Profile enrichment ──
@@ -116,6 +118,7 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
     // both fail to find the window.
     firefoxUserPrefs: {
       'dom.disable_window_move_resize': false,
+      'privacy.resistFingerprinting.letterboxing': false,
     },
   };
 
@@ -136,6 +139,8 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
     if (clonedFp.audio) {
       delete clonedFp.audio;
     }
+    
+
     browserConfig.fingerprint = clonedFp;
   }
   
@@ -151,8 +156,39 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
     // Also store bounds for the page resize pass
     (browserConfig)._initialBounds = bounds;
 
-    const config = ConfigStore.load();
-    if (process.platform === 'darwin' && config.macOSTilingEngine === 'profile-injection') {
+    // Issue 8: Force Camoufox to natively tile without fighting macOS
+    // Camoufox enforces its window size to match the spoofed screen fingerprint.
+    // By overriding the screen fingerprint to exactly match our grid tile size,
+    // Camoufox will natively construct a perfectly sized window.
+    // Camoufox allows window configuration natively:
+    browserConfig.window = {
+      width: bounds.width,
+      height: bounds.height,
+    };
+    // Also store bounds for the page resize pass
+    (browserConfig)._initialBounds = bounds;
+
+    // Issue 8: Force Camoufox to natively tile without fighting macOS
+    // Camoufox enforces its window size to match the spoofed screen fingerprint.
+    // By overriding the screen fingerprint to exactly match our grid tile size,
+    // Camoufox will natively construct a perfectly sized window.
+    if (mode === "headed-grid" && bounds) {
+      if (!browserConfig.fingerprint) {
+        browserConfig.fingerprint = {};
+      }
+      browserConfig.fingerprint.screen = {
+        width: Math.floor(bounds.width),
+        height: Math.floor(bounds.height),
+        availWidth: Math.floor(bounds.width),
+        availHeight: Math.floor(bounds.height),
+        availTop: 0,
+        availLeft: 0,
+        colorDepth: 24,
+        pixelDepth: 24
+      };
+    }
+
+    if (process.platform === 'darwin') {
        try {
            // We explicitly force a custom user profile dir so we can pre-seed it with our xulstore.json
            // Camoufox natively supports passing a custom string to `profile` property

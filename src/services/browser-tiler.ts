@@ -452,9 +452,7 @@ export class BrowserTiler {
 
         // ── Viewport Fallback (Firefox/Camoufox) ──
         if (!nativeTilingSuccess) {
-           const config = ConfigStore.load();
-           if (config.macOSTilingEngine === 'profile-injection') {
-             // For profile-injection, we try to move it natively via JS if the profile injection didn't snap it perfectly
+             // Try to move it natively via JS if the profile injection didn't snap it perfectly
              try {
                 await page.evaluate(({x, y, w, h}) => {
                    window.moveTo(x, y);
@@ -464,7 +462,7 @@ export class BrowserTiler {
              } catch (e: any) {
                 log.warn(`JS window.moveTo failed: ${e.message}`);
              }
-           }
+           
            log.warn(`All native OS window moving methods failed for ${uniqueTitle}. Falling back to internal page.setViewportSize() so screenshots are correct.`);
            await page.setViewportSize({ width: Math.floor(bounds.width), height: Math.floor(bounds.height) }).catch(() => {});
            nativeTilingSuccess = true; // Mark as success so the flow continues smoothly
