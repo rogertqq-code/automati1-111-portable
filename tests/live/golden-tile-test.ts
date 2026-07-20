@@ -77,7 +77,14 @@ async function waitForLoginSuccess(page: Page, backend: string, timeoutMs: numbe
     // Signal D: Error detected — fail fast
     const hasError = await page.evaluate(() => {
       const body = document.body?.innerText?.toLowerCase() || "";
-      return body.includes("incorrect") || body.includes("invalid") || body.includes("wrong password");
+      return body.includes("incorrect") || 
+             body.includes("invalid") || 
+             body.includes("wrong password") ||
+             body.includes("disabled") ||
+             body.includes("locked") ||
+             body.includes("too many") ||
+             body.includes("no account") ||
+             body.includes("not found");
     }).catch(() => false);
     
     if (hasError) {
@@ -231,7 +238,7 @@ async function captureAndCompositeTiledScreenshot(
     const html = `<!DOCTYPE html>
 <html><head><style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: #1a1a2e; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; width: 1920px; height: 1080px; }
+  body { background: #1a1a2e; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; grid-template-rows: 1fr; width: 1920px; height: 1080px; }
   .tile { position: relative; overflow: hidden; }
   .tile img { width: 100%; height: 100%; object-fit: cover; }
   .label { position: absolute; top: 0; left: 0; right: 0; background: rgba(0,0,0,0.7); color: #0f0; font: bold 18px monospace; padding: 8px 14px; z-index: 10; }
@@ -250,26 +257,31 @@ async function captureAndCompositeTiledScreenshot(
 async function main() {
   console.log("Starting 4-backend concurrent tiling test...");
   
-  const MAX_ATTEMPTS = 5;
+  const MAX_ATTEMPTS = 1;
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    for (const targetName of testTargets) {
-      console.log(`\n=== TILE TEST ATTEMPT ${attempt} - TARGET: ${targetName} ===\n`);
-      nukeAllBrowsers();
-      await new Promise(r => setTimeout(r, 3000));
-      
-      const backends = ["cloak-headed", "stealth-headed", "cloak-headed-nocloak", "zendriver-headed"];
-      const tiler = new BrowserTiler(4);
-      tiler.reconfigure(4, { cols: 2, rows: 2 });
+    console.log(`\n=== TILE TEST ATTEMPT ${attempt} - VARIETY OF SITES ===\n`);
+    nukeAllBrowsers();
+    await new Promise(r => setTimeout(r, 3000));
+    
+    const backends = [
+      { id: "cloak-headed", target: "joe" },
+      { id: "stealth-headed", target: "bovada" },
+      { id: "cloak-headed-nocloak", target: "ignition" },
+      { id: "zendriver-headed", target: "slots" }
+    ];
+    const tiler = new BrowserTiler(4);
       
       // Stagger launches by 5 seconds each to reduce CPU contention
-      const promises = backends.map(async (backend, i) => {
-        await new Promise(r => setTimeout(r, i * 5000));
-        console.log(`[${backend}] Launching (stagger offset: ${i * 5}s) for ${targetName}...`);
-        return runGoldenFlow(backend, targetName).catch(err => {
-          console.error(`[${backend}] ❌ Flow Failed: ${err.message}`);
-          throw err;
-        });
+    const promises = backends.map(async (combo, i) => {
+      const backend = combo.id;
+      const targetName = combo.target;
+      await new Promise(r => setTimeout(r, i * 5000));
+      console.log(`[${backend}] Launching (stagger offset: ${i * 5}s) for ${targetName}...`);
+      return runGoldenFlow(backend, targetName).catch(err => {
+        console.error(`[${backend}] ❌ Flow Failed: ${err.message}`);
+        throw err;
       });
+    });
       
       const results = await Promise.allSettled(promises);
       
@@ -325,10 +337,10 @@ async function main() {
         }
       }
     }
-  }
+    console.log("\n=== TILE TEST COMPLETED ===");
 }
 
-main().catch(err => {
+main().catch((err: any) => {
   console.error("Fatal:", err);
   nukeAllBrowsers();
   process.exit(1);

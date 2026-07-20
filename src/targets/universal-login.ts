@@ -91,31 +91,66 @@ export async function universalLoginFlow(options: UniversalLoginOptions): Promis
   const { page, siteName, mode } = options;
   console.log(`[UniversalLogin] Starting universal flow for ${siteName} (mode: ${mode})`);
 
-  // Start continuous cookie banner dismissal
-  const killBanners = async () => {
-    const deadline = Date.now() + 30000;
-    while (Date.now() < deadline) {
-      try {
-        await page.evaluate(() => {
-          try { (window as any).CookieInformation?.submitAllCategories?.(); } catch {}
-          for (const el of document.querySelectorAll('.coi-banner, .coi-consent-banner, [id*="cookie"], [class*="cookie-banner"]')) {
-            (el as HTMLElement).style.setProperty('display', 'none', 'important');
-          }
-        });
-        const btn = page.locator('.coi-banner__accept, [data-coi-btn="accept"], button:has-text("ACCEPT ALL"), button:has-text("Accept All")').first();
-        if (await btn.isVisible().catch(() => false)) {
-          await btn.click({ timeout: 500 }).catch(() => {});
-        }
-      } catch {}
-      await new Promise(r => setTimeout(r, 500));
-    }
-  };
-  killBanners().catch(() => {});
-
   // Wait for login form to exist
-  await page.waitForSelector('input[type="email"], input[name*="email"], input#email, #username', { state: "visible", timeout: 45000 }).catch(() => {});
+  console.log(`[UniversalLogin] Waiting for login form to appear...`);
+  const formReady = await page.waitForSelector('input[type="email"], input[name*="email"], input#email, #username', { state: "visible", timeout: 45000 }).catch(() => null);
+  if (!formReady) {
+    console.log(`[UniversalLogin] ❌ Login form never appeared! Page did not load fully.`);
+    return { success: false };
+  }
+  
+  // Give React a moment to attach event handlers after form appears
+  await new Promise(r => setTimeout(r, 2000));
+
+  // 4. Synchronously dismiss cookie banners before filling
+  console.log(`[UniversalLogin] Checking for cookie banners to dismiss...`);
+  try {
+    // Attempt native API
+    await page.evaluate(() => {
+      try { (window as any).CookieInformation?.submitAllCategories?.(); } catch {}
+    }).catch(() => {});
+    
+    // Try calibrated click first (most reliable for tricky overlays)
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const calibPath = path.join(process.cwd(), "data", "cookie-calibration.json");
+      if (fs.existsSync(calibPath)) {
+        const calibs = JSON.parse(fs.readFileSync(calibPath, "utf-8"));
+        const calib = calibs[siteName] || calibs["joefortune"];
+        if (calib && calib.coordinates) {
+          console.log(`[UniversalLogin] Executing calibrated coordinate click for cookie banner (X=${calib.coordinates.x}, Y=${calib.coordinates.y})`);
+          await page.mouse.click(calib.coordinates.x, calib.coordinates.y);
+          await new Promise(r => setTimeout(r, 800)); // wait for animation
+        }
+      }
+    } catch (e) {}
+
+    const btnLoc = page.locator('.coi-banner__accept, [data-coi-btn="accept"], text="ACCEPT ALL", text="Accept All", text="Accept", text="Got it"');
+    const count = await btnLoc.count().catch(() => 0);
+    for (let i = 0; i < count; i++) {
+      const btn = btnLoc.nth(i);
+      if (await btn.isVisible({ timeout: 500 }).catch(() => false)) {
+        console.log(`[UniversalLogin] Found visible cookie banner, clicking...`);
+        await btn.click({ force: true, timeout: 1000 }).catch(() => {});
+        await new Promise(r => setTimeout(r, 800)); // wait for animation
+        break;
+      }
+    }
+    // Also forcefully hide the overlay via CSS just in case
+    await page.evaluate(() => {
+      const overlays = document.querySelectorAll('.coi-banner__overlay, .cookie-overlay, [class*="cookie"]');
+      overlays.forEach(el => {
+        (el as HTMLElement).style.setProperty('display', 'none', 'important');
+      });
+    }).catch(() => {});
+  } catch {}
 
   const coords = getCoordinateMap(siteName);
+
+  // Wait for page to fully settle before interacting with the React form
+  console.log(`[UniversalLogin] Waiting for page network to settle before injecting...`);
+  await page.waitForLoadState("networkidle", { timeout: 15000 }).catch(() => {});
 
   if (mode === "benchmark-direct") {
     // Benchmark mode: raw React-state injection bypass
@@ -144,10 +179,35 @@ export async function universalLoginFlow(options: UniversalLoginOptions): Promis
     
     // Focus and Enter
     const passInput = page.locator('input[type="password"], input[name*="pass"], input#password').first();
-    await passInput.focus().catch(() => {});
-    await passInput.press("Enter", { delay: 100 }).catch(async () => {
-      await page.keyboard.press("Enter", { delay: 100 }).catch(() => {});
-    });
+    await passInput.evaluate((el: HTMLElement) => el.focus()).catch(() => {});
+    
+    // Use page.keyboard to bypass actionability checks (which hang if obscured by cookie banner)
+    await page.keyboard.press("Enter", { delay: 100 }).catch(() => {});
+    
+    await new Promise(r => setTimeout(r, 1500));
+    
+    const isLoginStillVisible = await page.locator('button[type="submit"], button:has-text("Login"), button:has-text("LOG IN")').first().isVisible().catch(() => false);
+    
+    if (page.url().includes("/login") && isLoginStillVisible) {
+      console.log(`[UniversalLogin] Enter key missed (or slow), falling back to triple click...`);
+      const submitLoc = page.locator('button[type="submit"], button:has-text("Login"), button:has-text("LOG IN")');
+      const count = await submitLoc.count().catch(() => 0);
+      let clicked = false;
+      for (let i = 0; i < count; i++) {
+        const btn = submitLoc.nth(i);
+        const box = await btn.boundingBox().catch(() => null);
+        if (box && box.width > 0 && box.height > 0) {
+          console.log(`[UniversalLogin] Clicking visible submit button at index ${i}`);
+          await btn.click({ force: true, timeout: 2000 }).catch(() => {});
+          clicked = true;
+          break;
+        }
+      }
+      if (!clicked) {
+        console.log(`[UniversalLogin] No visible submit button found via bounding box, forcing click on first...`);
+        await submitLoc.first().click({ force: true, timeout: 2000 }).catch(() => {});
+      }
+    }
 
     return { success: true, submitMethod: "benchmark-enter", networkVerdict: "unknown" };
   } else {
