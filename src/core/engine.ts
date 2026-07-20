@@ -1637,34 +1637,6 @@ export class AutomationEngine extends EventEmitter {
     this.triggerRowUpdate(rowIdx);
   }
 
-  /**
-   * Forcefully clear the 1-hour tempDisabled cooldown for a parked session.
-   * This allows the Operator to re-queue the session immediately.
-   */
-  forceWake(email: string): void {
-    const targetEmail = email.trim().toLowerCase();
-    const rowIdx = this.rows.findIndex(r => r.email.trim().toLowerCase() === targetEmail);
-    if (rowIdx === -1) return;
-
-    const row = this.rows[rowIdx];
-    if (!row) return;
-
-    if (row.tempDisabledUntil) {
-      delete row.tempDisabledUntil;
-      row.status = "queued";
-      // Clear outcome for sites that were marked tempdisabled
-      for (const [, s] of Object.entries(row.sites)) {
-        if (s.outcome === "tempdisabled") {
-          s.outcome = "N/A";
-          s.attempts = 0;
-          delete s.error;
-        }
-      }
-      this.log("INFO", `[Force Wake] Cleared 1-hour cooldown for ${targetEmail}. Re-queued.`);
-      this.triggerRowUpdate(rowIdx);
-    }
-  }
-
   /** Remove engine rows whose email matches one of the supplied entries.
    *  Used by the dashboard "Delete Selected" action. Match is
    *  case-insensitive and trim-sensitive, mirroring credentials.csv parsing.
@@ -2865,14 +2837,27 @@ export class AutomationEngine extends EventEmitter {
                         this.log("WARN", `  🔒 ${cred.email} added to ${target.name} email denylist — future runs will skip`);
                       }
                     } else if (result.outcome === "tempdisabled") {
-                      // Row-level cooldown still applies so a future batch retries
-                      // this site, but other sites in this row still run now.
-                      // @ts-expect-error noUncheckedIndexedAccess
-                      this.rows[idx].tempDisabledUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
                       // @ts-expect-error noUncheckedIndexedAccess
                       this.rows[idx].currentBatch++;
                       // @ts-expect-error noUncheckedIndexedAccess
-                      this.log("WARN", `  ⏳ ${cred.email} @ ${target.name}: TEMPORARILY DISABLED — 1hr cooldown set (next batch: ${this.rows[idx].currentBatch}), continuing with other sites`);
+                      this.log("WARN", `  ⏳ ${cred.email} @ ${target.name}: TEMPORARILY DISABLED — 1hr site-specific cooldown set (next batch: ${this.rows[idx].currentBatch}).`);
+                      
+                      setTimeout(() => {
+                        const currentRowIdx = this.rows.findIndex(r => r.email === cred.email);
+                        if (currentRowIdx !== -1) {
+                          const row = this.rows[currentRowIdx]!;
+                          if (row.sites[target.name]) {
+                            row.sites[target.name]!.outcome = "queued";
+                            row.sites[target.name]!.attempts = 0;
+                            delete row.sites[target.name]!.error;
+                            row.status = "queued";
+                            this.rows.splice(currentRowIdx, 1);
+                            this.rows.unshift(row);
+                            this.triggerRowUpdate(0);
+                            this.log("INFO", `  ⏰ 1hr cooldown finished for ${cred.email} @ ${target.name}. Moved to top of queue.`);
+                          }
+                        }
+                      }, 60 * 60 * 1000);
                     }
 
                     flowTracer.recordEvent({
@@ -2895,11 +2880,26 @@ export class AutomationEngine extends EventEmitter {
                     } else if (e instanceof TempDisabledError) {
                       sStatus!.outcome = "tempdisabled";
                       // @ts-expect-error noUncheckedIndexedAccess
-                      this.rows[idx].tempDisabledUntil = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-                      // @ts-expect-error noUncheckedIndexedAccess
                       this.rows[idx].currentBatch++;
                       // @ts-expect-error noUncheckedIndexedAccess
-                      this.log("WARN", `  ⏳ ${cred.email} @ ${target.name}: TEMPORARILY DISABLED — 1hr cooldown set (next batch: ${this.rows[idx].currentBatch}), continuing with other sites`);
+                      this.log("WARN", `  ⏳ ${cred.email} @ ${target.name}: TEMPORARILY DISABLED — 1hr site-specific cooldown set (next batch: ${this.rows[idx].currentBatch}).`);
+                      
+                      setTimeout(() => {
+                        const currentRowIdx = this.rows.findIndex(r => r.email === cred.email);
+                        if (currentRowIdx !== -1) {
+                          const row = this.rows[currentRowIdx]!;
+                          if (row.sites[target.name]) {
+                            row.sites[target.name]!.outcome = "queued";
+                            row.sites[target.name]!.attempts = 0;
+                            delete row.sites[target.name]!.error;
+                            row.status = "queued";
+                            this.rows.splice(currentRowIdx, 1);
+                            this.rows.unshift(row);
+                            this.triggerRowUpdate(0);
+                            this.log("INFO", `  ⏰ 1hr cooldown finished for ${cred.email} @ ${target.name}. Moved to top of queue.`);
+                          }
+                        }
+                      }, 60 * 60 * 1000);
                     } else if (isProxyOrNetworkError(e)) {
                       // Proxy/session failure mid-flight — bubble to outer retry loop
                       // so a fresh sticky session is tried before giving up.

@@ -2455,16 +2455,6 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
             break;
           }
 
-          case "force-wake": {
-            const { email } = msg.data || {};
-            if (email && engine) {
-              engine.forceWake(email);
-              log.info(`[UI] Force Wake triggered for ${email}`);
-              broadcast({ type: "log", data: { level: "INFO", message: `⏰ Force Wake triggered for ${email}` } });
-            }
-            break;
-          }
-
           case "resolve-parked": {
             const { email: parkEmail, site: parkSite, originalOutcome, newOutcome, screenshotUrl: parkScreenshot } = msg.data || {};
             if (!parkEmail || !parkSite || !newOutcome) {
@@ -2856,7 +2846,7 @@ wss.on("connection", (ws: any, req: import("http").IncomingMessage) => {
           case "force-wake": {
             const email = msg.data?.email || msg.email;
             if (!email) break;
-            engine.forceWake(email);
+
             const rowIdx = (engine as any).rows.findIndex((r: any) => r.email.toLowerCase() === email.toLowerCase());
             if (rowIdx !== -1) {
               const row = (engine as any).rows[rowIdx];
