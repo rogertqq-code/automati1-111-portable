@@ -21,6 +21,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { createSession, PROXY_INFO, getProxyPoolSize, proxyScoreTracker, type SessionHandle, getActiveProxyPool } from "../../backends/index.js";
 import { AgentObserver } from "../intelligence/agent-observer.js";
+import { attachStaticCache } from "../services/static-cache.js";
 import { preValidatePool } from "../proxy/proxy-pre-ping.js";
 import { killOurOrphans } from "../services/process-cleaner.js";
 
@@ -2566,6 +2567,7 @@ export class AutomationEngine extends EventEmitter {
               if (handle.page) {
                 this.registerLiveSession(cred.email, handle.page);
                 AgentObserver.attach(handle.page, handle.sessionId).catch((err: any) => this.log("WARN", `Failed to attach AgentObserver: ${err.message}`));
+                attachStaticCache(handle.page, handle.sessionId).catch((err: any) => this.log("WARN", `Failed to attach StaticCache: ${err.message}`));
               }
 
               const seedTag = handle.fingerprintSeed != null ? ` seed=${handle.fingerprintSeed}` : "";
@@ -2770,6 +2772,14 @@ export class AutomationEngine extends EventEmitter {
                       const activePages = activePage.context().pages().length;
                       const fromUrl = activePage.url();
                       this.log("INFO", `  ↪ same-tab transition: ${fromUrl} → ${target.name} (${activePages} page${activePages !== 1 ? "s" : ""} in session)`);
+                      
+                      // ── DNS Prefetching (Speed Optimization) ──
+                      try {
+                        const targetOrigin = new URL(target.url).origin;
+                        await activePage.setContent(`<html><head><link rel="dns-prefetch" href="${targetOrigin}"><link rel="preconnect" href="${targetOrigin}"></head><body></body></html>`);
+                        await new Promise(r => setTimeout(r, 60)); // Yield to network stack
+                      } catch {}
+
                       // @ts-expect-error noUncheckedIndexedAccess
                       result = await this.executeLoginFlow(activePage, target, cred, this.rows[idx].currentBatch, config.postLoadDelay ?? 0, proxyIdentifier, handle!.backend, isSessionReused);
                     }

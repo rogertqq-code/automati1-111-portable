@@ -1,6 +1,6 @@
 {
   "name": "automation-scripts",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Dual-target credential validator with Australian VPN",
   "type": "module",
   "main": "server.ts",
