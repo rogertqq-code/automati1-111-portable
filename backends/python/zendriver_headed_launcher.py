@@ -35,6 +35,14 @@ async def main():
         if user_agent:
             browser_args.append(f"--user-agent={user_agent}")
             
+        import platform
+        if platform.system().lower() == "darwin" and config.get("macOSTilingEngine") == "native-cdp" and config.get("bounds"):
+            b = config["bounds"]
+            if "x" in b and "y" in b:
+                browser_args.append(f"--window-position={int(b['x'])},{int(b['y'])}")
+            if "width" in b and "height" in b:
+                browser_args.append(f"--window-size={int(b['width'])},{int(b['height'])}")
+            
         browser = await zd.start(
             headless=False,
             browser_args=browser_args

@@ -384,36 +384,10 @@ export class BrowserTiler {
            log.warn(`Native C# resizer.exe not found at ${resizerExe}`);
         }
 
-        // ── macOS AppleScript Tiling ──
+        // ── macOS AppleScript Tiling (DEPRECATED) ──
+        // We no longer use osascript because it requires admin Accessibility rights
         if (!nativeTilingSuccess && process.platform === "darwin") {
-          try {
-            const script = `
-              tell application "System Events"
-                set allProcs to application processes whose background only is false
-                repeat with proc in allProcs
-                  try
-                    set allWins to (every window of proc whose name contains "${uniqueTitle}")
-                    if (count of allWins) > 0 then
-                      set win to item 1 of allWins
-                      set position of win to {${Math.floor(bounds.x)}, ${Math.floor(bounds.y)}}
-                      set size of win to {${Math.floor(bounds.width)}, ${Math.floor(bounds.height)}}
-                      return "SUCCESS"
-                    end if
-                  end try
-                end repeat
-              end tell
-              return "NOT_FOUND"
-            `;
-            const out = execFileSync("osascript", ["-e", script], { encoding: "utf8" });
-            if (out.includes("SUCCESS")) {
-              nativeTilingSuccess = true;
-              log.info(`macOS AppleScript tiling successful for ${uniqueTitle}`);
-            } else {
-              log.info(`macOS AppleScript tiling could not find window ${uniqueTitle}`);
-            }
-          } catch (e: any) {
-            log.warn(`macOS AppleScript tiling failed: ${e.message}`);
-          }
+           log.info(`macOS detected. Skipping AppleScript. Relying on Native CDP or JS Injection based on config.`);
         }
 
         // ── node-window-manager fallback (Issue 8 — Firefox/Camoufox tiling fix) ──
@@ -478,6 +452,19 @@ export class BrowserTiler {
 
         // ── Viewport Fallback (Firefox/Camoufox) ──
         if (!nativeTilingSuccess) {
+           const config = ConfigStore.load();
+           if (config.macOSTilingEngine === 'profile-injection') {
+             // For profile-injection, we try to move it natively via JS if the profile injection didn't snap it perfectly
+             try {
+                await page.evaluate(({x, y, w, h}) => {
+                   window.moveTo(x, y);
+                   window.resizeTo(w, h);
+                }, { x: Math.floor(bounds.x), y: Math.floor(bounds.y), w: Math.floor(bounds.width), h: Math.floor(bounds.height) });
+                log.info(`JS window.moveTo/resizeTo fallback executed for ${uniqueTitle}`);
+             } catch (e: any) {
+                log.warn(`JS window.moveTo failed: ${e.message}`);
+             }
+           }
            log.warn(`All native OS window moving methods failed for ${uniqueTitle}. Falling back to internal page.setViewportSize() so screenshots are correct.`);
            await page.setViewportSize({ width: Math.floor(bounds.width), height: Math.floor(bounds.height) }).catch(() => {});
            nativeTilingSuccess = true; // Mark as success so the flow continues smoothly

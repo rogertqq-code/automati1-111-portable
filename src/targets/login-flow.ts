@@ -25,6 +25,7 @@ import { healSelector } from "../hermes/dom-healer.js";
 import { persistHealedSelector } from "../hermes/selector-cache.js";
 import { getViewportCoordinateMarkdown } from "../intelligence/ai-vision-coordinator.js";
 import { handleWicketkeeper } from "../stealth/wicketkeeper-handler.js";
+import { AgentObserver } from "../intelligence/agent-observer.js";
 // ── Source-of-truth trigger words ────────────────────────────────────────────
 //
 // These phrases are the only definitions of the corresponding outcomes. Every
@@ -320,6 +321,13 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
   if (attemptIdx > 0) {
     usernameOk = true;
   }
+  
+  // Extract sessionId from page context if available (it is injected by AgentObserver.attach, but we'll extract it from the log prefix or pass it. Actually, we can use targetEmail as a session identifier for the overlay, or just get it from page). 
+  // We'll just pass 'sessionId' as targetEmail since it uniquely identifies the slot row.
+  const observerSessionId = targetEmail;
+
+  AgentObserver.emitState(observerSessionId, "CHOREOGRAPHY_STARTED");
+  await AgentObserver.updateOverlay(page, "CHOREOGRAPHY_STARTED", attemptIdx + 1);
 
   // Rule 11: Non-Blocking Noise (restored per automation.md strict directive)
   // Fire 1 randomized right-click and 1 left-click across the viewport within 50-300ms, non-blocking.
@@ -346,6 +354,8 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
   // fill to guarantee the banner is gone. The async watcher below is a safety net.
   //
   // Tier 1: Native JavaScript API
+  AgentObserver.emitState(observerSessionId, "DISMISSING_CMP");
+  await AgentObserver.updateOverlay(page, "DISMISSING_CMP", attemptIdx + 1);
   await page.evaluate(() => {
     try { (window as any).CookieInformation?.submitAllCategories?.(); } catch { /* intentional */ }
   }).catch(() => {});
@@ -477,6 +487,8 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
 
   // Fallback: Individual field fill (only when autofill fails)
   if (!usernameOk) {
+    AgentObserver.emitState(observerSessionId, "FILLING_CREDENTIALS");
+    await AgentObserver.updateOverlay(page, "FILLING_CREDENTIALS", attemptIdx + 1);
     usernameOk = await inputText(page, selectors.username, targetEmail);
     if (!usernameOk) {
       const healed = await healAndFill(page, "Username input field", targetEmail, siteName, selectors, "username", inputText, persistHealedSelector);
@@ -562,6 +574,9 @@ export async function executeUnifiedLoginChoreography(input: UnifiedChoreography
   }).catch(() => { });
 
   // 3. Immediate First Submit Attempt (Enter Key)
+  AgentObserver.emitState(observerSessionId, "SUBMITTING_FORM");
+  await AgentObserver.updateOverlay(page, "SUBMITTING_FORM", attemptIdx + 1);
+
   if (attemptIdx === 0) {
       const preSubmitUrl = page.url();
 

@@ -1,6 +1,9 @@
 import { type BrowserContext, type Page  } from "playwright-core";
 import { Camoufox as StealthBrowser } from "camoufox-js";
 import { createLogger } from "../src/core/logger.js";
+import { ConfigStore } from "../src/core/config-store.js";
+import path from "path";
+import fs from "fs";
 import { type SessionOpts, type SessionHandle, acquireHeadedSlot, gridBounds, releaseHeadedSlot, applyProxyProtocolOverride } from "./index.js";
 import { loadSpiderSettings, ProxyProtocol } from "../src/core/spider-settings.js";
 import { startProxyForwarder, type ProxyForwarder } from "../src/proxy/proxy-forwarder.js";
@@ -140,14 +143,41 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
   if (!headlessEffective) {
     slot = await acquireHeadedSlot();
     const bounds = await gridBounds(slot);
-    // Firefox uses width/height natively in browserConfig, but not X/Y via CLI.
-    // Camoufox allows window configuration:
+    // Camoufox allows window configuration natively:
     browserConfig.window = {
       width: bounds.width,
       height: bounds.height,
     };
     // Also store bounds for the page resize pass
     (browserConfig)._initialBounds = bounds;
+
+    const config = ConfigStore.load();
+    if (process.platform === 'darwin' && config.macOSTilingEngine === 'profile-injection') {
+       try {
+           // We explicitly force a custom user profile dir so we can pre-seed it with our xulstore.json
+           // Camoufox natively supports passing a custom string to `profile` property
+           const profileDir = path.join(process.cwd(), 'data', 'temp_profiles', `stealth_profile_${Date.now()}_${Math.floor(Math.random() * 10000)}`);
+           if (!fs.existsSync(profileDir)) fs.mkdirSync(profileDir, { recursive: true });
+           
+           const xulstorePath = path.join(profileDir, 'xulstore.json');
+           const xulData = {
+               "chrome://browser/content/browser.xhtml": {
+                   "main-window": {
+                       "screenX": Math.floor(bounds.x).toString(),
+                       "screenY": Math.floor(bounds.y).toString(),
+                       "width": Math.floor(bounds.width).toString(),
+                       "height": Math.floor(bounds.height).toString(),
+                       "sizemode": "normal"
+                   }
+               }
+           };
+           fs.writeFileSync(xulstorePath, JSON.stringify(xulData), 'utf8');
+           browserConfig.profile = profileDir; // Inject the pre-seeded profile!
+           log.info(`[${sessionId}] macOS Profile Injection Tiling active. Pre-seeded xulstore.json at ${profileDir}`);
+       } catch (e: any) {
+           log.warn(`[${sessionId}] Failed to inject xulstore.json for macOS tiling: ${e.message}`);
+       }
+    }
   } else {
     // Pseudo-headless: force headful but hidden off-screen.
     // IMPORTANT: Use realistic viewport dimensions (1280x720) instead of 1x1.

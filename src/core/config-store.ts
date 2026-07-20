@@ -34,6 +34,8 @@ export interface AppConfig {
   stealthBypassHttpCloak: boolean;
   proxyRotateUrl: string;
   tilingLayout: string;
+  macOSTilingEngine: "native-cdp" | "profile-injection" | "os-native";
+  enableAgentObservation: boolean;
   goldenCredentials: { joe?: string; ignition?: string };
   spiderApiKey?: string;
 }
@@ -69,6 +71,8 @@ const DEFAULT_CONFIG: AppConfig = {
   stealthBypassHttpCloak: true,
   proxyRotateUrl: "",
   tilingLayout: "horizontal",
+  macOSTilingEngine: "native-cdp",
+  enableAgentObservation: false,
   goldenCredentials: {
     joe: "phuttasopit@hotmail.co.th:Tomo06032553",
     ignition: "Mattdonor@yahoo.com:Dada0707#",

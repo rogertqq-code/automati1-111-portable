@@ -2,6 +2,7 @@ import { chromium } from "playwright-core";
 import { spawn } from "child_process";
 import path from "path";
 import { createLogger } from "../src/core/logger.js";
+import { ConfigStore } from "../src/core/config-store.js";
 import { type SessionOpts, type SessionHandle, acquireHeadedSlot, gridBounds, releaseHeadedSlot, applyProxyProtocolOverride, resolveTlsProfile } from "./index.js";
 import { loadSpiderSettings, ProxyProtocol } from "../src/core/spider-settings.js";
 import { startProxyForwarder, type ProxyForwarder } from "../src/proxy/proxy-forwarder.js";
@@ -97,10 +98,13 @@ export async function createZendriverSession(opts: SessionOpts): Promise<Session
     }
     proxyConfig = { server: forwarder.serverUrl };
   }
+  const config = ConfigStore.load();
   zendriverProcess.stdin.write(JSON.stringify({
     proxy: proxyConfig,
     userAgent: uaProfile?.ua,
-    os: uaProfile?.os
+    os: uaProfile?.os,
+    bounds: sBounds,
+    macOSTilingEngine: config.macOSTilingEngine
   }) + "\n");
   zendriverProcess.stdin.end();
 

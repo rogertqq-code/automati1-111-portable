@@ -20,6 +20,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { createSession, PROXY_INFO, getProxyPoolSize, proxyScoreTracker, type SessionHandle, getActiveProxyPool } from "../../backends/index.js";
+import { AgentObserver } from "../intelligence/agent-observer.js";
 import { preValidatePool } from "../proxy/proxy-pre-ping.js";
 import { killOurOrphans } from "../services/process-cleaner.js";
 
@@ -2564,6 +2565,7 @@ export class AutomationEngine extends EventEmitter {
               // ── Register live session for Hermes CDP ──
               if (handle.page) {
                 this.registerLiveSession(cred.email, handle.page);
+                AgentObserver.attach(handle.page, handle.sessionId).catch((err: any) => this.log("WARN", `Failed to attach AgentObserver: ${err.message}`));
               }
 
               const seedTag = handle.fingerprintSeed != null ? ` seed=${handle.fingerprintSeed}` : "";
