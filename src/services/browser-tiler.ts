@@ -613,6 +613,42 @@ export class BrowserTiler {
       // Empty, no longer need Mutex!
     }
   }
+
+  /**
+   * Dynamically repositions an existing browser window without restarting it.
+   * - Chromium uses internal CDP Browser.setWindowBounds.
+   * - Camoufox uses our injected WebExtension bridge via window.postMessage.
+   */
+  public static async moveWindowDynamically(session: any, backend: string, bounds: ScreenBounds): Promise<void> {
+    const isStealth = backend.startsWith("stealth");
+    const page: Page = session.page;
+
+    if (isStealth) {
+      // Dispatch WebExtension message via content script hook
+      try {
+        await page.evaluate((b) => {
+          window.postMessage({ type: "NATIVE_RESIZE", bounds: b }, "*");
+        }, bounds);
+        log.info(`Dispatched WebExtension resize for Camoufox -> ${bounds.width}x${bounds.height} @ (${bounds.x},${bounds.y})`);
+      } catch (err) {
+        log.warn(`Dynamic WebExtension resize failed for Camoufox: ${err}`);
+      }
+    } else {
+      // Use CDP for Chromium-based backends
+      try {
+        const client = await page.context().newCDPSession(page);
+        const { windowId } = await client.send('Browser.getWindowForTarget');
+        await client.send('Browser.setWindowBounds', {
+          windowId,
+          bounds: { left: bounds.x, top: bounds.y, width: bounds.width, height: bounds.height, windowState: 'normal' }
+        });
+        await client.detach().catch(() => {});
+        log.info(`Dispatched CDP resize for Chromium -> ${bounds.width}x${bounds.height} @ (${bounds.x},${bounds.y})`);
+      } catch (err) {
+        log.warn(`Dynamic CDP resize failed for Chromium: ${err}`);
+      }
+    }
+  }
 }
 // Export a universal global instance
 export const globalTiler = new BrowserTiler(1);

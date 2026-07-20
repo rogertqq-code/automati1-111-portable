@@ -173,24 +173,31 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
       };
     }
 
-    if (process.platform === 'darwin') {
+    if (mode === 'headed-grid' && bounds) {
        try {
-           // We explicitly bypass macOS accessibility restrictions by injecting a custom WebExtension
+           // We explicitly bypass OS accessibility restrictions by injecting a custom WebExtension
            // that calls browser.windows.update() internally to resize the physical window natively!
+           // This also acts as a dynamic messaging bridge so we can remote-control it in real-time.
            const extDir = path.join(process.cwd(), 'data', 'temp_profiles', `resizer_ext_${Date.now()}`);
            if (!fs.existsSync(extDir)) fs.mkdirSync(extDir, { recursive: true });
            
            fs.writeFileSync(path.join(extDir, 'manifest.json'), JSON.stringify({
                "manifest_version": 2,
-               "name": "Automati Resizer",
+               "name": "Automati Dynamic Resizer",
                "version": "1.0",
                "background": {
                    "scripts": ["background.js"]
                },
-               "permissions": ["windows"]
+               "content_scripts": [{
+                   "matches": ["<all_urls>"],
+                   "js": ["content.js"],
+                   "run_at": "document_start"
+               }],
+               "permissions": ["windows", "<all_urls>"]
            }), 'utf8');
            
            fs.writeFileSync(path.join(extDir, 'background.js'), `
+               // Initial snap to grid
                browser.windows.getCurrent().then(win => {
                    browser.windows.update(win.id, { 
                        left: ${Math.floor(bounds.x)}, 
@@ -199,13 +206,33 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
                        height: ${Math.floor(bounds.height)} 
                    });
                });
+               
+               // Dynamic remote-control listener
+               browser.runtime.onMessage.addListener((msg, sender) => {
+                   if (msg && msg.type === "NATIVE_RESIZE") {
+                       browser.windows.update(sender.tab.windowId, {
+                           left: msg.bounds.x,
+                           top: msg.bounds.y,
+                           width: msg.bounds.width,
+                           height: msg.bounds.height
+                       });
+                   }
+               });
+           `, 'utf8');
+
+           fs.writeFileSync(path.join(extDir, 'content.js'), `
+               window.addEventListener("message", (event) => {
+                   if (event.data && event.data.type === "NATIVE_RESIZE") {
+                       browser.runtime.sendMessage(event.data);
+                   }
+               });
            `, 'utf8');
            
            if (!browserConfig.addons) browserConfig.addons = [];
            browserConfig.addons.push(extDir);
-           log.info(`[${sessionId}] macOS WebExtension Tiling active. Injected resizer addon at ${extDir}`);
+           log.info(`[${sessionId}] WebExtension Tiling active. Injected dynamic resizer addon at ${extDir}`);
        } catch (e: any) {
-           log.warn(`[${sessionId}] Failed to inject WebExtension for macOS tiling: ${e.message}`);
+           log.warn(`[${sessionId}] Failed to inject WebExtension for tiling: ${e.message}`);
        }
     }
   } else {
