@@ -48,7 +48,9 @@ export interface WicketkeeperConfig {
 
 // ── Defaults ─────────────────────────────────────────────────────────────────
 
-const DEFAULT_SOLVER_PATH = "pow-solver/target/release/pow-solver";
+const DEFAULT_SOLVER_PATH = process.platform === "win32"
+  ? "pow-solver/target/release/pow-solver.exe"
+  : "pow-solver/target/release/pow-solver";
 const DEFAULT_TOKEN_QUEUE_PATH = "wicketkeeper-tokens.json";
 const DEFAULT_PASSIVE_TIMEOUT = 30_000; // 30s watchdog per Rule §2
 const TOKEN_VALIDITY_MS = 10 * 60 * 1000; // 10-minute JWT window

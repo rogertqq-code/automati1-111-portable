@@ -48,6 +48,22 @@ jobs:
 
       - name: Unit tests with coverage
         run: npm run test:coverage
+        env:
+          SPIDER_API_KEY: ${{ secrets.SPIDER_API_KEY }}
+          SPIDER_LOCAL_API_KEY: ${{ secrets.SPIDER_LOCAL_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
+          GCS_ACCESS_KEY: ${{ secrets.GCS_ACCESS_KEY }}
+          GCS_SECRET_KEY: ${{ secrets.GCS_SECRET_KEY }}
+          GCS_PROJECT_ID: ${{ secrets.GCS_PROJECT_ID }}
+          GCS_PATH_PREFIX: ${{ secrets.GCS_PATH_PREFIX }}
+          GCS_ENABLED: ${{ secrets.GCS_ENABLED }}
+          PRIMARY_PROXY_URL: ${{ secrets.PRIMARY_PROXY_URL }}
+          EXTERNAL_PROXY_POOL: ${{ secrets.EXTERNAL_PROXY_POOL }}
+          PROXY_ROTATE_URL_TEMPLATE: ${{ secrets.PROXY_ROTATE_URL_TEMPLATE }}
+          REDIS_URL: ${{ secrets.REDIS_URL }}
 
       - name: Upload coverage report
         if: always()
@@ -90,6 +106,15 @@ jobs:
 
       - name: Run Playwright tests
         run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" npm run test:e2e
+        env:
+          SPIDER_API_KEY: ${{ secrets.SPIDER_API_KEY }}
+          SPIDER_LOCAL_API_KEY: ${{ secrets.SPIDER_LOCAL_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          PRIMARY_PROXY_URL: ${{ secrets.PRIMARY_PROXY_URL }}
+          EXTERNAL_PROXY_POOL: ${{ secrets.EXTERNAL_PROXY_POOL }}
+          PROXY_ROTATE_URL_TEMPLATE: ${{ secrets.PROXY_ROTATE_URL_TEMPLATE }}
 
       - name: Upload to TestDino
         if: always()

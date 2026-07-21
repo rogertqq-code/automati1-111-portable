@@ -31,6 +31,12 @@ jobs:
 
       - name: Run Playwright tests (update snapshots)
         run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" npm run test:e2e -- --update-snapshots
+        env:
+          SPIDER_API_KEY: ${{ secrets.SPIDER_API_KEY }}
+          SPIDER_LOCAL_API_KEY: ${{ secrets.SPIDER_LOCAL_API_KEY }}
+          PRIMARY_PROXY_URL: ${{ secrets.PRIMARY_PROXY_URL }}
+          EXTERNAL_PROXY_POOL: ${{ secrets.EXTERNAL_PROXY_POOL }}
+          PROXY_ROTATE_URL_TEMPLATE: ${{ secrets.PROXY_ROTATE_URL_TEMPLATE }}
 
       - name: Commit changes
         uses: stefanzweifel/git-auto-commit-action@v5

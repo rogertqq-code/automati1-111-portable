@@ -104,3 +104,14 @@ hermes/hermes-learning.db
 lifecycle-test-results/*
 !lifecycle-test-results/.gitkeep
 .traycer/
+
+# ── Temporary & Diagnostic Output Files ─────────────────────────────────────────
+failure-*.png
+desktop-verification*.png
+eslint-tiler*.txt
+*lint-results*.json
+fp-dump.json
+fingerprint-score-report.json
+wicketkeeper-tokens.json
+tile-screenshots/
+

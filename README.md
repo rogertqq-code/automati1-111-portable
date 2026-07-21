@@ -55,6 +55,8 @@ The documentation has been completely rewritten to serve as the definitive archi
    The 9-Profile system, `httpcloak` TLS masking, and backend isolation.
 4. **[Classification Gate](docs/4-CLASSIFICATION_GATE.md)**
    The single source of truth for outcome routing, soft vs hard toxic handling, and cashier verification.
+5. **[Windows 11 Launch Guide](docs/WINDOWS_LAUNCH_GUIDE.md)**
+   System configuration, native C# resizers, Wicketkeeper solver building, and PowerShell startup.
 
 ---
 
