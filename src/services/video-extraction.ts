@@ -185,7 +185,8 @@ export async function getFfmpegPath(): Promise<string | null> {
     const { promisify } = await import("util");
     const execAsync = promisify(exec);
     try {
-    const { stdout } = await execAsync("which ffmpeg", { encoding: "utf-8" });
+    const cmd = process.platform === "win32" ? "where ffmpeg" : "which ffmpeg";
+    const { stdout } = await execAsync(cmd, { encoding: "utf-8" });
     const result = stdout.trim();
     if (result && fs.existsSync(result)) return result;
     } catch { /* not on PATH */ }
