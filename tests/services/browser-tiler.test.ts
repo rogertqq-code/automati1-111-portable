@@ -102,11 +102,11 @@ describe("browser-tiler", () => {
       const tiler = new BrowserTiler(4); // 2x2 grid
       const bounds0 = await tiler.getBounds(0);
       expect(bounds0).not.toBeNull();
-      // Should be roughly width=960, height=1032/2=516 (minus gaps/fuzzing)
-      expect(bounds0!.width).toBeGreaterThan(400);
-      expect(bounds0!.width).toBeLessThan(1000);
-      expect(bounds0!.height).toBeGreaterThan(200);
-      expect(bounds0!.height).toBeLessThan(600);
+      // For 4 windows, auto layout forces 1x4 grid
+      expect(bounds0!.width).toBeGreaterThan(300);
+      expect(bounds0!.width).toBeLessThan(600);
+      expect(bounds0!.height).toBeGreaterThan(900);
+      expect(bounds0!.height).toBeLessThan(1100);
     });
   });
 

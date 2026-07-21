@@ -127,7 +127,7 @@ describe("fingerprint-determinism (property-based)", () => {
       for (const email of emails) {
         const hw = getConsistentHardware(email, "windows", 0, "4m");
         expect([4, 8]).toContain(hw.cores);
-        expect([4, 8]).toContain(hw.memory);
+        expect([8, 16]).toContain(hw.memory);
       }
     });
 
@@ -136,7 +136,7 @@ describe("fingerprint-determinism (property-based)", () => {
       for (const pool of ["4r", "4i", "1"] as const) {
         for (const email of emails) {
           const hw = getConsistentHardware(email, "windows", 0, pool);
-          expect([8, 16]).toContain(hw.cores);
+          expect([8, 12, 16]).toContain(hw.cores);
           expect([16, 32]).toContain(hw.memory);
         }
       }

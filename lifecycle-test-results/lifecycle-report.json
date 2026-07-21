@@ -2,7 +2,7 @@
   {
     "backend": "cloak-headless",
     "status": "PASS",
-    "duration": 3417,
+    "duration": 4238,
     "steps": [
       {
         "name": "resolveBackendSettings",
@@ -12,22 +12,22 @@
       {
         "name": "profileCoherence",
         "status": "PASS",
-        "detail": "OS=windows, Chrome=133, HW=8c/16GB, Res=3840x2160"
+        "detail": "OS=windows, Chrome=133, HW=4c/8GB, Res=3840x2160"
       },
       {
         "name": "createSession",
         "status": "PASS",
-        "detail": "sessionId=cloak-9373285a-42201, backend=cloak, time=1001ms"
+        "detail": "sessionId=cloak-d1d94895-42467, backend=cloak, time=2075ms"
       },
       {
         "name": "pageNavigation",
         "status": "PASS",
-        "detail": "url=https://www.browserscan.net/bot-detection, title=\"BrowserScan - Robot Detection/WebDriver | BrowserScan\", time=1833ms"
+        "detail": "url=https://www.browserscan.net/bot-detection, title=\"BrowserScan - Robot Detection/WebDriver | BrowserScan\", time=1176ms"
       },
       {
         "name": "stealthVerification",
         "status": "PASS",
-        "detail": "webdriver=false, cores=4, mem=4GB, screen=1920x1080, platform=Win32, gpu=ANGLE (NVIDIA, NVIDIA GeForce RTX 4070 ("
+        "detail": "webdriver=false, cores=8, mem=16GB, screen=1921x1081, platform=Win32, gpu=ANGLE (NVIDIA, NVIDIA GeForce RTX 3070 T"
       },
       {
         "name": "webrtcLeakCheck",
@@ -42,294 +42,12 @@
       {
         "name": "sessionMetadata",
         "status": "PASS",
-        "detail": "ua=windows, hw=8c, geo=AU, fonts=typical-user, interaction=slow, seed=42201"
+        "detail": "ua=windows, hw=4c, geo=AU, fonts=typical-user, interaction=slow, seed=42467"
       },
       {
         "name": "sessionClose",
         "status": "PASS",
-        "detail": "closed cleanly in 132ms"
-      }
-    ]
-  },
-  {
-    "backend": "cloak-headed",
-    "status": "PASS",
-    "duration": 15087,
-    "steps": [
-      {
-        "name": "resolveBackendSettings",
-        "status": "PASS",
-        "detail": "httpCloak=true, stealthJS=true, weight=0.5"
-      },
-      {
-        "name": "profileCoherence",
-        "status": "PASS",
-        "detail": "OS=windows, Chrome=133, HW=8c/16GB, Res=3840x2160"
-      },
-      {
-        "name": "createSession",
-        "status": "PASS",
-        "detail": "sessionId=cloak-88bf5dca-42557, backend=cloak, time=11570ms"
-      },
-      {
-        "name": "pageNavigation",
-        "status": "PASS",
-        "detail": "url=https://www.browserscan.net/bot-detection, title=\"BrowserScan - Robot Detection/WebDriver | BrowserScan\", time=1113ms"
-      },
-      {
-        "name": "stealthVerification",
-        "status": "PASS",
-        "detail": "webdriver=false, cores=4, mem=16GB, screen=1920x1080, platform=Win32, gpu=ANGLE (NVIDIA, NVIDIA GeForce RTX 5080 L"
-      },
-      {
-        "name": "webrtcLeakCheck",
-        "status": "PASS",
-        "detail": "candidates=0, leaks=0"
-      },
-      {
-        "name": "screenshot",
-        "status": "PASS",
-        "detail": "saved=/Volumes/Macintosh_HD/Users/user298993/Desktop/automati1-111-portable/lifecycle-test-results/cloak-headed-lifecycle.png (512.8KB)"
-      },
-      {
-        "name": "sessionMetadata",
-        "status": "PASS",
-        "detail": "ua=windows, hw=8c, geo=AU, fonts=typical-user, interaction=slow, seed=42557"
-      },
-      {
-        "name": "sessionClose",
-        "status": "PASS",
-        "detail": "closed cleanly in 1773ms"
-      }
-    ]
-  },
-  {
-    "backend": "stealth",
-    "status": "PASS",
-    "duration": 17082,
-    "steps": [
-      {
-        "name": "resolveBackendSettings",
-        "status": "PASS",
-        "detail": "httpCloak=false, stealthJS=false, weight=1"
-      },
-      {
-        "name": "profileCoherence",
-        "status": "PASS",
-        "detail": "OS=windows, Chrome=133, HW=8c/16GB, Res=3840x2160"
-      },
-      {
-        "name": "createSession",
-        "status": "PASS",
-        "detail": "sessionId=stealth-1784108946743-42089, backend=stealth, time=16535ms"
-      },
-      {
-        "name": "pageNavigation",
-        "status": "PASS",
-        "detail": "url=https://www.browserscan.net/bot-detection, title=\"BrowserScan - Robot Detection/WebDriver | BrowserScan\", time=159ms"
-      },
-      {
-        "name": "stealthVerification",
-        "status": "PASS",
-        "detail": "webdriver=false, cores=16, mem=N/AGB, screen=1920x1080, platform=Win32, gpu=ANGLE (NVIDIA, NVIDIA GeForce GTX 980 Di"
-      },
-      {
-        "name": "webrtcLeakCheck",
-        "status": "PASS",
-        "detail": "candidates=0, leaks=0"
-      },
-      {
-        "name": "screenshot",
-        "status": "PASS",
-        "detail": "saved=/Volumes/Macintosh_HD/Users/user298993/Desktop/automati1-111-portable/lifecycle-test-results/stealth-lifecycle.png (349.5KB)"
-      },
-      {
-        "name": "sessionMetadata",
-        "status": "PASS",
-        "detail": "ua=windows, hw=8c, fonts=typical-user, interaction=slow, seed=42089"
-      },
-      {
-        "name": "sessionClose",
-        "status": "PASS",
-        "detail": "closed cleanly in 262ms"
-      }
-    ]
-  },
-  {
-    "backend": "stealth-headed",
-    "status": "PASS",
-    "duration": 16778,
-    "steps": [
-      {
-        "name": "resolveBackendSettings",
-        "status": "PASS",
-        "detail": "httpCloak=false, stealthJS=false, weight=0.5"
-      },
-      {
-        "name": "profileCoherence",
-        "status": "PASS",
-        "detail": "OS=windows, Chrome=133, HW=8c/16GB, Res=3840x2160"
-      },
-      {
-        "name": "createSession",
-        "status": "PASS",
-        "detail": "sessionId=stealth-1784108963824-42233, backend=stealth, time=16335ms"
-      },
-      {
-        "name": "pageNavigation",
-        "status": "PASS",
-        "detail": "url=https://www.browserscan.net/bot-detection, title=\"BrowserScan - Robot Detection/WebDriver | BrowserScan\", time=116ms"
-      },
-      {
-        "name": "stealthVerification",
-        "status": "PASS",
-        "detail": "webdriver=false, cores=16, mem=N/AGB, screen=2560x1440, platform=Win32, gpu=ANGLE (NVIDIA, NVIDIA GeForce GTX 980 Di"
-      },
-      {
-        "name": "webrtcLeakCheck",
-        "status": "PASS",
-        "detail": "candidates=0, leaks=0"
-      },
-      {
-        "name": "screenshot",
-        "status": "PASS",
-        "detail": "saved=/Volumes/Macintosh_HD/Users/user298993/Desktop/automati1-111-portable/lifecycle-test-results/stealth-headed-lifecycle.png (348.7KB)"
-      },
-      {
-        "name": "sessionMetadata",
-        "status": "PASS",
-        "detail": "ua=windows, hw=8c, fonts=typical-user, interaction=slow, seed=42233"
-      },
-      {
-        "name": "sessionClose",
-        "status": "PASS",
-        "detail": "closed cleanly in 249ms"
-      }
-    ]
-  },
-  {
-    "backend": "zendriver",
-    "status": "PASS",
-    "duration": 3852,
-    "steps": [
-      {
-        "name": "resolveBackendSettings",
-        "status": "PASS",
-        "detail": "httpCloak=true, stealthJS=true, weight=0.8"
-      },
-      {
-        "name": "profileCoherence",
-        "status": "PASS",
-        "detail": "OS=windows, Chrome=133, HW=8c/16GB, Res=3840x2160"
-      },
-      {
-        "name": "createSession",
-        "status": "PASS",
-        "detail": "sessionId=zendriver-1784108980604-42773, backend=zendriver, time=1752ms"
-      },
-      {
-        "name": "pageNavigation",
-        "status": "PASS",
-        "detail": "url=https://www.browserscan.net/bot-detection, title=\"BrowserScan - Robot Detection/WebDriver | BrowserScan\", time=189ms"
-      },
-      {
-        "name": "stealthVerification",
-        "status": "PASS",
-        "detail": "webdriver=false, cores=8, mem=16GB, screen=1536x864, platform=Win32, gpu=Intel Inc. Intel(R) HD Graphics 630"
-      },
-      {
-        "name": "webrtcLeakCheck",
-        "status": "PASS",
-        "detail": "candidates=0, leaks=0"
-      },
-      {
-        "name": "screenshot",
-        "status": "PASS",
-        "detail": "saved=/Volumes/Macintosh_HD/Users/user298993/Desktop/automati1-111-portable/lifecycle-test-results/zendriver-lifecycle.png (269.9KB)"
-      },
-      {
-        "name": "sessionMetadata",
-        "status": "PASS",
-        "detail": "ua=windows, hw=8c, geo=AU, fonts=typical-user, interaction=slow, seed=42773"
-      },
-      {
-        "name": "sessionClose",
-        "status": "PASS",
-        "detail": "closed cleanly in 2ms"
-      }
-    ]
-  },
-  {
-    "backend": "zendriver-headed",
-    "status": "PASS",
-    "duration": 7740,
-    "steps": [
-      {
-        "name": "resolveBackendSettings",
-        "status": "PASS",
-        "detail": "httpCloak=true, stealthJS=true, weight=0.4"
-      },
-      {
-        "name": "profileCoherence",
-        "status": "PASS",
-        "detail": "OS=windows, Chrome=133, HW=8c/16GB, Res=3840x2160"
-      },
-      {
-        "name": "createSession",
-        "status": "PASS",
-        "detail": "sessionId=zendriver-headed-1784108984455-42902, backend=zendriver, time=6183ms"
-      },
-      {
-        "name": "pageNavigation",
-        "status": "PASS",
-        "detail": "url=https://www.browserscan.net/bot-detection, title=\"BrowserScan - Robot Detection/WebDriver | BrowserScan\", time=168ms"
-      },
-      {
-        "name": "stealthVerification",
-        "status": "PASS",
-        "detail": "webdriver=false, cores=8, mem=16GB, screen=1440x900, platform=Win32, gpu=ANGLE (Intel, Intel(R) UHD Graphics 620 "
-      },
-      {
-        "name": "webrtcLeakCheck",
-        "status": "PASS",
-        "detail": "candidates=0, leaks=0"
-      },
-      {
-        "name": "screenshot",
-        "status": "PASS",
-        "detail": "saved=/Volumes/Macintosh_HD/Users/user298993/Desktop/automati1-111-portable/lifecycle-test-results/zendriver-headed-lifecycle.png (158.9KB)"
-      },
-      {
-        "name": "sessionMetadata",
-        "status": "PASS",
-        "detail": "ua=windows, hw=8c, geo=AU, fonts=typical-user, interaction=slow, seed=42902"
-      },
-      {
-        "name": "sessionClose",
-        "status": "PASS",
-        "detail": "closed cleanly in 2ms"
-      }
-    ]
-  },
-  {
-    "backend": "curl-api",
-    "status": "PASS",
-    "duration": 1,
-    "steps": [
-      {
-        "name": "resolveBackendSettings",
-        "status": "PASS",
-        "detail": "No optimal settings (fallback to global config)"
-      },
-      {
-        "name": "profileCoherence",
-        "status": "PASS",
-        "detail": "OS=windows, Chrome=133, HW=8c/16GB, Res=3840x2160"
-      },
-      {
-        "name": "curlApiFlow",
-        "status": "PASS",
-        "detail": "No apiLoginEndpoint → N/A (correct behavior)"
+        "detail": "closed cleanly in 103ms"
       }
     ]
   }

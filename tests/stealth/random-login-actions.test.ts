@@ -129,8 +129,8 @@ describe("random-login-actions", () => {
   it("executeSubmit tab_enter", async () => {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
     await executeSubmit(mockPage, "#submit", "#password", "tab_enter");
-    expect(mockPage.keyboard.press).toHaveBeenCalledWith("Tab");
-    expect(mockPage.keyboard.press).toHaveBeenCalledWith("Enter");
+    expect(mockPage.keyboard.press).toHaveBeenCalledWith("Tab", { delay: expect.any(Number) });
+    expect(mockPage.keyboard.press).toHaveBeenCalledWith("Enter", { delay: expect.any(Number) });
   });
 
   it("clickFieldRandomly", async () => {

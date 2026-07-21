@@ -1,6 +1,6 @@
 import { expect, test, describe, vi, beforeEach, afterEach } from 'vitest';
 import { verifyLoginSuccessVisually } from '../../src/hermes/visual-verifier.js';
-import { Page, BrowserContext, CDPSession } from 'playwright-core';
+import { Page } from 'playwright-core';
 
 describe('verifyLoginSuccessVisually', () => {
   let mockPage: unknown;

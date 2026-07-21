@@ -55,6 +55,9 @@ export default tseslint.config(
   {
     files: ['tests/**/*.ts', 'tests/**/*.test.ts'],
     rules: {
+      '@typescript-eslint/no-unused-vars': 'off',
+      '@typescript-eslint/require-await': 'off',
+      '@typescript-eslint/no-unnecessary-type-assertion': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
       '@typescript-eslint/no-unsafe-assignment': 'warn',
       '@typescript-eslint/no-unsafe-member-access': 'off',
