@@ -97,13 +97,13 @@ export function getConsistentHardware(
   if (proxyPool === "4m") {
     // Mobile IP: ideally 4-8 cores, 4-8 GB RAM
     const pairs = [{ cores: 4, memory: 8 }, { cores: 8, memory: 8 }, { cores: 8, memory: 16 }];
-    const pair = pairs[hash % pairs.length];
+    const pair = pairs[hash % pairs.length]!;
     baseProfile.cores = Math.max(minCores, Math.min(maxCores, pair.cores));
     baseProfile.memory = Math.max(minMemory, Math.min(maxMemory, pair.memory));
   } else if (proxyPool === "4r" || proxyPool === "4i" || proxyPool === "1") {
     // Residential/ISP Desktop IP: ideally 8-16 cores, 16-32 GB RAM
     const pairs = [{ cores: 8, memory: 16 }, { cores: 12, memory: 32 }, { cores: 16, memory: 32 }];
-    const pair = pairs[hash % pairs.length];
+    const pair = pairs[hash % pairs.length]!;
     baseProfile.cores = Math.max(minCores, Math.min(maxCores, pair.cores));
     baseProfile.memory = Math.max(minMemory, Math.min(maxMemory, pair.memory));
   }

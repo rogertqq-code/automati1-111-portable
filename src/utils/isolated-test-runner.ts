@@ -9,7 +9,7 @@ if (args.length === 0) {
   process.exit(1);
 }
 
-const targetTestFile = args[0];
+const targetTestFile = args[0]!;
 const resolvedTarget = path.resolve(process.cwd(), targetTestFile);
 
 if (!fs.existsSync(resolvedTarget)) {

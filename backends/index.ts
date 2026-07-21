@@ -436,7 +436,7 @@ export interface SessionHandle {
 }
 
 export interface SessionOpts {
-
+  mode?: string;
   projectId?: string;
   viewport?: { width: number; height: number };
   slowMo?: number;

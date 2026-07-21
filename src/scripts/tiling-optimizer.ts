@@ -47,7 +47,7 @@ async function runTestForWindowCount(windowCount: number, reportDir: string) {
 
       await session.page.goto('about:blank');
       
-      const color = colors[backend];
+      const color = colors[backend]!;
       await session.page.evaluate(({ backend, color, i }) => {
         document.body.style.backgroundColor = color;
         document.body.style.margin = '0';

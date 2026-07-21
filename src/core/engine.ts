@@ -54,8 +54,6 @@ import {
   waitForSubmitMutationResult,
 } from "../targets/login-flow.js";
 import {
-  fillCreditCardFields,
-  handleCaptcha,
   installEarlyRememberMeHook,
   installEarlyCookieDismissHook,
   universalLoginFlow,
