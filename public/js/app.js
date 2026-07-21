@@ -154,19 +154,6 @@
       }
     });
 
-    function saveUIState() {
-      try {
-        localStorage.setItem('cfgTilingLayout', document.getElementById('advTilingLayout')?.value || '');
-      } catch (e) { console.warn('UI state save failed', e); }
-    }
-
-    function loadUIState() {
-      try {
-        const layout = localStorage.getItem('cfgTilingLayout');
-        if (layout) { const el = document.getElementById('advTilingLayout'); if (el) el.value = layout; }
-      } catch(e){}
-    }
-
     function getUIConfig() {
       return {
         targets: [
@@ -950,6 +937,14 @@
       // Update Effective Configuration Matrix
       const matrixEl = document.getElementById('effectiveConfigPreview');
       if (matrixEl) {
+        const backend = document.getElementById('backendSelect')?.value || 'stealth';
+        const isRotate = backend.startsWith('rotate');
+        const isStealth = backend.startsWith('stealth');
+        const isCurl = false;
+        const httpCloakSupported = backend !== 'spider-local' && backend !== 'spider-rest' && !backend.startsWith('stealth');
+        const httpCloakOn = document.getElementById('advUseHttpCloak')?.checked || false;
+        const isHeadless = !backend.includes('headed') && backend !== 'spider-local' && backend !== 'rotate-backends';
+
         let summary = `[ACTIVE BACKEND]: ${backend.toUpperCase()}` + '\n';
         if (isRotate) summary += `[WARNING]: UI selections for proxies, stealth, and mode will be OVERRIDDEN per-session by the ${backend} rotation engine!` + '\n';
         
