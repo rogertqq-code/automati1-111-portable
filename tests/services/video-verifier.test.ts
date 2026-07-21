@@ -51,14 +51,6 @@ vi.mock("node:fs", async (importOriginal) => {
 
 vi.mock("ffmpeg-static", () => ({ default: "/fake/ffmpeg" }));
 
-import {
-  isVerificationAvailable,
-  classifyWithAI,
-  verifySiteRecording,
-  processVerificationJob,
-  validateAiConfig
-} from "../../src/services/video-verifier.js";
-import { extractKeyFrames } from "../../src/services/video-extraction.js";
 
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 const { __generateContentMock } = await import("@google/generative-ai") as any;

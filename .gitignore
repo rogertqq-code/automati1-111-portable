@@ -99,3 +99,8 @@ proxy-pool-*.txt
 .vscode/samurai-agent/
 *.gguf
 
+# ── Review Artifact Cleanup ────────────────────────────────────────────────────
+hermes/hermes-learning.db
+lifecycle-test-results/*
+!lifecycle-test-results/.gitkeep
+.traycer/
