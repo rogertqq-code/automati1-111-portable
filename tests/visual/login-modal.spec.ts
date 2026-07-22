@@ -5,7 +5,7 @@ test.describe('Visual Regression Baseline - Login Modals', () => {
   test.setTimeout(120000);
 
   test('Joe Fortune Login Modal Baseline', async () => {
-    const session = await createSession({ backend: 'cloak-headless' });
+    const session = await createSession({ backend: 'cloak-headless', headless: true, cleanSession: true });
     try {
       const page = session.page;
       
@@ -46,7 +46,7 @@ test.describe('Visual Regression Baseline - Login Modals', () => {
   });
 
   test('Ignition Casino Login Modal Baseline', async () => {
-    const session = await createSession({ backend: 'cloak-headless' });
+    const session = await createSession({ backend: 'cloak-headless', headless: true, cleanSession: true });
     try {
       const page = session.page;
       
