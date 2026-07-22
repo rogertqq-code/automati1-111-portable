@@ -28,14 +28,14 @@ const MOBILE_MODE = process.argv.includes('--mobile');
 
 // ── All individual backends — Chromium first (fast/parallel), stealth last (slow/sequential) ──
 const BACKENDS: Array<{ name: string; opts: Partial<SessionOpts> }> = [
-  { name: 'cloak-headless',       opts: { backend: 'cloak-headless',       headless: true } },
-  { name: 'cloak-headed',         opts: { backend: 'cloak-headed',         headless: false } },
-  { name: 'cloak-headless-nocloak', opts: { backend: 'cloak-headless-nocloak', headless: true } },
-  { name: 'cloak-headed-nocloak', opts: { backend: 'cloak-headed-nocloak', headless: false } },
-  { name: 'zendriver',            opts: { backend: 'zendriver',            headless: true } },
-  { name: 'zendriver-headed',     opts: { backend: 'zendriver-headed',     headless: false } },
+  // { name: 'cloak-headless',       opts: { backend: 'cloak-headless',       headless: true } },
+  // { name: 'cloak-headed',         opts: { backend: 'cloak-headed',         headless: false } },
+  // { name: 'cloak-headless-nocloak', opts: { backend: 'cloak-headless-nocloak', headless: true } },
+  // { name: 'cloak-headed-nocloak', opts: { backend: 'cloak-headed-nocloak', headless: false } },
+  // { name: 'zendriver',            opts: { backend: 'zendriver',            headless: true } },
+  // { name: 'zendriver-headed',     opts: { backend: 'zendriver-headed',     headless: false } },
   { name: 'stealth',              opts: { backend: 'stealth',              headless: true } },
-  { name: 'stealth-headed',       opts: { backend: 'stealth-headed',       headless: false } },
+  // { name: 'stealth-headed',       opts: { backend: 'stealth-headed',       headless: false } },
 ];
 
 // ── Only the 3 canonical strategies (legacy aliases normalize to 'optimal' at runtime) ──
@@ -266,6 +266,9 @@ async function runCell(
 
   try {
     const page = session.page;
+    page.on("console", (msg: any) => log.info(`    [Page Console] ${msg.type()}: ${msg.text()}`));
+    page.on("pageerror", (err: any) => log.warn(`    [Page Error] ${err}`));
+    page.on("requestfailed", (req: any) => log.warn(`    [Request Failed] ${req.url()} - ${req.failure()?.errorText}`));
     await page.goto(auditUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     // Wait for full audit completion (26 vectors + SDKs)

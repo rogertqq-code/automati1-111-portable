@@ -4,7 +4,7 @@ import { createLogger } from "../src/core/logger.js";
 import { ConfigStore } from "../src/core/config-store.js";
 import path from "path";
 import fs from "fs";
-import { type SessionOpts, type SessionHandle, acquireHeadedSlot, gridBounds, releaseHeadedSlot, applyProxyProtocolOverride } from "./index.js";
+import { type SessionOpts, type SessionHandle, acquireHeadedSlot, gridBounds, releaseHeadedSlot, applyProxyProtocolOverride, checkAiFingerprint } from "./index.js";
 import { loadSpiderSettings, ProxyProtocol } from "../src/core/spider-settings.js";
 import { startProxyForwarder, type ProxyForwarder } from "../src/proxy/proxy-forwarder.js";
 import { startHttpCloakForwarder } from "./httpcloak-forwarder.js";
@@ -64,6 +64,20 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
       geoProfile = alignGeoToProxy(opts.proxy.server, opts.proxyCountry);
     } catch { /* non-fatal — defaults to no locale override */ }
   }
+
+  // ── AI Fingerprint Verifier Gate ──
+  // Blocks session launch if the generated profiles form an impossible combination.
+  // Note: 'resolved' is missing here since Camoufox handles its own viewport resolution natively,
+  // but we can pass a dummy or undefined and let checkAiFingerprint use a fallback.
+  await checkAiFingerprint(opts, {
+    email: opts.email,
+    uaProfile,
+    hardwareProfile,
+    geoProfile,
+    fontProfile,
+    cacheProfile,
+    proxyServerStr: opts.proxy?.server
+  });
 
   // ── Network Routing & TLS Identity ──
   let forwarder: ProxyForwarder | null = null;
@@ -139,9 +153,15 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
     if (clonedFp.audio) {
       delete clonedFp.audio;
     }
-    
-
     browserConfig.fingerprint = clonedFp;
+  }
+
+  // Ensure hardware determinism syncs natively with Camoufox.
+  // ONLY do this if fingerprint object is already populated, because creating a partial 
+  // object crashes Camoufox (it expects screen, navigator, etc.).
+  if (hardwareProfile && browserConfig.fingerprint) {
+    browserConfig.fingerprint.hardwareConcurrency = hardwareProfile.cores;
+    browserConfig.fingerprint.deviceMemory = hardwareProfile.memory;
   }
   
   let slot: number | undefined;
@@ -277,12 +297,14 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
 
   let context: BrowserContext;
   let page: Page;
+  let isDefaultContext = false;
   try {
     // Camoufox often spawns a default context and page. 
     // Creating a new context in headful mode can hang Firefox.
     const contexts = browser.contexts();
     if (contexts.length > 0) {
       context = contexts[0];
+      isDefaultContext = true;
     } else {
       const contextPromise = browser.newContext(contextOpts);
       context = await Promise.race([
@@ -296,23 +318,72 @@ export async function createStealthSession(opts: SessionOpts): Promise<SessionHa
 
     context.on('weberror', () => { /* suppress */ });
     
-    let pages = context.pages();
+    const pages = context.pages();
     if (pages.length === 0) {
-      // Wait for Camoufox's default page to attach to CDP (Rule 1: no arbitrary sleep)
-      await context.waitForEvent('page', { timeout: 15000 }).catch(() => {});
-      pages = context.pages();
-    }
-    if (pages.length > 0) {
-      page = pages[0] as Page;
-    } else {
-      const pagePromise = context.newPage();
-      page = await Promise.race([
-        pagePromise,
-        new Promise<any>((_, rej) => setTimeout(() => rej(new Error("context.newPage timed out")), 30000))
-      ]).catch(err => {
-        pagePromise.then((p: Page) => p.close().catch(() => {})).catch(() => {});
-        throw err;
+      // Robust Parallel Page Acquisition to prevent Camoufox Juggler protocol deadlocks.
+      // Calling context.newPage() immediately while the default page is attaching causes deadlocks.
+      // Waiting purely sequentially risks wasting 12s on a hung native page.
+      // We race them with a 4s delay gate for the fallback.
+      log.debug(`[${sessionId}] No pages yet — attempting robust parallel page acquisition`);
+
+      let acquiredPage: Page | null = null;
+      
+      const acquirePromise = new Promise<Page>((resolve, reject) => {
+        let finished = false;
+        
+        // 1. Listen for default page natively attaching
+        if (isDefaultContext) {
+          context.waitForEvent('page').then(() => {
+            if (finished) return;
+            const attached = context.pages();
+            if (attached.length > 0) {
+              finished = true;
+              log.debug(`[${sessionId}] Default page attached natively`);
+              resolve(attached[0] as Page);
+            }
+          }).catch(() => {}); // catch to prevent unhandled rejections crashing the loop
+        }
+        
+        // 2. Delayed fallback gate
+        const delayMs = isDefaultContext ? 4000 : 0;
+        setTimeout(() => {
+          if (finished) return;
+          const attached = context.pages();
+          if (attached.length > 0) {
+            finished = true;
+            resolve(attached[0] as Page);
+            return;
+          }
+          
+          log.debug(`[${sessionId}] ${isDefaultContext ? '4s delay passed' : 'New context'} — safely invoking fallback newPage()`);
+          context.newPage().then(p => {
+            if (!finished) {
+              finished = true;
+              resolve(p);
+            }
+          }).catch(err => {
+            if (!finished) {
+              finished = true;
+              reject(err instanceof Error ? err : new Error(String(err)));
+            }
+          });
+        }, delayMs);
       });
+
+      // Master 20s timeout boundary
+      const timeoutPromise = new Promise<never>((_, rej) =>
+        setTimeout(() => rej(new Error("Page acquisition timed out after 20s")), 20000)
+      );
+
+      acquiredPage = await Promise.race([acquirePromise, timeoutPromise]);
+
+      if (!acquiredPage) {
+        throw new Error("Page acquisition failed to return a valid page");
+      }
+      
+      page = acquiredPage;
+    } else {
+      page = pages[0] as Page;
     }
     
     // Verify the page is actually functional
