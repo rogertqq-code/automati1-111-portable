@@ -1,6 +1,6 @@
-import { SessionOpts, resolveCacheInjectionState, shouldRecordLocalVideo, shouldUseCleanLocalProfile, HEADED_GRID_SIZE, acquireHeadedSlot, gridBounds, localRecordVideoOptions, resolveTlsProfile } from "./index.js";
+import { type SessionOpts, type SessionHandle, acquireHeadedSlot, gridBounds, releaseHeadedSlot, applyProxyProtocolOverride, resolveTlsProfile, checkAiFingerprint, resolveCacheInjectionState, shouldRecordLocalVideo, shouldUseCleanLocalProfile, HEADED_GRID_SIZE, localRecordVideoOptions } from "./index.js";
 
-import { finalizeLocalRecording, headedQuarantine, acquireHeadlessContext, trackHeadlessContext, cleanupIsolatedProfile, stableProfileName, releaseHeadlessContext, injectStealthScripts, applyStealthContextOverrides, isolatedProfileDir, logReuse, localProfileRoot, releaseHeadedSlot, poolLog, headedPool, maybeAddCacheInjectionScript, SessionHandle, PooledHeadedContext, applyProxyProtocolOverride } from "./index.js";
+import { finalizeLocalRecording, headedQuarantine, acquireHeadlessContext, trackHeadlessContext, cleanupIsolatedProfile, stableProfileName, releaseHeadlessContext, injectStealthScripts, applyStealthContextOverrides, isolatedProfileDir, logReuse, localProfileRoot, poolLog, headedPool, maybeAddCacheInjectionScript, PooledHeadedContext } from "./index.js";
 import { loadSpiderSettings, ProxyProtocol } from "../src/core/spider-settings.js";
 import { disableBookmarksBar } from "../src/services/browser-tiler.js";
 import { proxyEntryKey } from "../src/proxy/proxy-score-tracker.js";
@@ -114,7 +114,7 @@ async function createCloakSession(opts: SessionOpts): Promise<SessionHandle> {
   });
   const recordVideoOptions = localRecordVideoOptions(recordLocalVideo, resolved, sessionId);
 
-  // await checkAiFingerprint(opts, { email: opts.email, uaProfile, hardwareProfile, geoProfile, fontProfile, cacheProfile, proxyServerStr, resolved });
+  await checkAiFingerprint(opts, { email: opts.email, uaProfile, hardwareProfile, geoProfile, fontProfile, cacheProfile, proxyServerStr, resolved });
 
   if (!headlessEffective && slot !== undefined && sBounds !== undefined) {
     // Slot-release flag for this createCloakSession call. Shared between the

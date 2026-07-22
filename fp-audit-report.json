@@ -3,78 +3,78 @@
     "backend": "cloak-headless",
     "mode": "direct",
     "strategy": "optimal",
-    "localScore": 0,
-    "fpComScore": 33,
+    "localScore": 99,
+    "fpComScore": null,
     "sannySoftPass": false,
     "issues": [
-      "SannySoft Failed: Plugins is of type PluginArray: failed, PHANTOM_WINDOW_HEIGHT: FAIL"
+      "Launch Failed: checkAiFingerprint is not defined"
     ],
-    "durationMs": 36594,
+    "durationMs": 29,
     "profileDrift": []
   },
   {
     "backend": "cloak-headless",
     "mode": "direct",
     "strategy": "native-only",
-    "localScore": 0,
-    "fpComScore": 33,
+    "localScore": 99,
+    "fpComScore": null,
     "sannySoftPass": false,
     "issues": [
-      "SannySoft Failed: Plugins is of type PluginArray: failed"
+      "Launch Failed: checkAiFingerprint is not defined"
     ],
-    "durationMs": 40758,
+    "durationMs": 1,
     "profileDrift": []
   },
   {
     "backend": "cloak-headless",
     "mode": "direct",
     "strategy": "full-stealth",
-    "localScore": 0,
-    "fpComScore": 33,
+    "localScore": 99,
+    "fpComScore": null,
     "sannySoftPass": false,
     "issues": [
-      "SannySoft Failed: Plugins is of type PluginArray: failed, MQ_SCREEN: FAIL, PHANTOM_WINDOW_HEIGHT: FAIL"
+      "Launch Failed: checkAiFingerprint is not defined"
     ],
-    "durationMs": 32761,
+    "durationMs": 0,
     "profileDrift": []
   },
   {
     "backend": "cloak-headless",
     "mode": "proxy-routed",
     "strategy": "optimal",
-    "localScore": 0,
-    "fpComScore": 33,
+    "localScore": 99,
+    "fpComScore": null,
     "sannySoftPass": false,
     "issues": [
-      "SannySoft Failed: Plugins is of type PluginArray: failed"
+      "Launch Failed: checkAiFingerprint is not defined"
     ],
-    "durationMs": 32504,
+    "durationMs": 1,
     "profileDrift": []
   },
   {
     "backend": "cloak-headless",
     "mode": "proxy-routed",
     "strategy": "native-only",
-    "localScore": 0,
-    "fpComScore": 33,
+    "localScore": 99,
+    "fpComScore": null,
     "sannySoftPass": false,
     "issues": [
-      "SannySoft Failed: Plugins is of type PluginArray: failed"
+      "Launch Failed: checkAiFingerprint is not defined"
     ],
-    "durationMs": 40456,
+    "durationMs": 1,
     "profileDrift": []
   },
   {
     "backend": "cloak-headless",
     "mode": "proxy-routed",
     "strategy": "full-stealth",
-    "localScore": 0,
-    "fpComScore": 33,
+    "localScore": 99,
+    "fpComScore": null,
     "sannySoftPass": false,
     "issues": [
-      "SannySoft Failed: Plugins is of type PluginArray: failed, MQ_SCREEN: FAIL, PHANTOM_WINDOW_HEIGHT: FAIL"
+      "Launch Failed: checkAiFingerprint is not defined"
     ],
-    "durationMs": 36418,
+    "durationMs": 1,
     "profileDrift": []
   },
   {
@@ -85,9 +85,9 @@
     "fpComScore": null,
     "sannySoftPass": false,
     "issues": [
-      "SannySoft Failed: Chrome (New): missing (failed)"
+      "Launch Failed: Page acquisition timed out after 20s"
     ],
-    "durationMs": 76997,
+    "durationMs": 38353,
     "profileDrift": []
   },
   {
@@ -100,7 +100,7 @@
     "issues": [
       "SannySoft Failed: Chrome (New): missing (failed)"
     ],
-    "durationMs": 77148,
+    "durationMs": 77027,
     "profileDrift": []
   },
   {
@@ -113,7 +113,7 @@
     "issues": [
       "SannySoft Failed: Chrome (New): missing (failed)"
     ],
-    "durationMs": 77116,
+    "durationMs": 77650,
     "profileDrift": []
   },
   {
@@ -124,9 +124,9 @@
     "fpComScore": null,
     "sannySoftPass": false,
     "issues": [
-      "SannySoft Failed: Chrome (New): missing (failed)"
+      "Launch Failed: Page acquisition timed out after 20s"
     ],
-    "durationMs": 77142,
+    "durationMs": 42768,
     "profileDrift": []
   },
   {
@@ -139,7 +139,7 @@
     "issues": [
       "SannySoft Failed: Chrome (New): missing (failed)"
     ],
-    "durationMs": 76984,
+    "durationMs": 84673,
     "profileDrift": []
   },
   {
@@ -152,51 +152,12 @@
     "issues": [
       "SannySoft Failed: Chrome (New): missing (failed)"
     ],
-    "durationMs": 77427,
+    "durationMs": 77129,
     "profileDrift": []
   },
   {
     "backend": "zendriver",
     "mode": "direct",
-    "strategy": "optimal",
-    "localScore": 99,
-    "fpComScore": null,
-    "sannySoftPass": false,
-    "issues": [
-      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
-    ],
-    "durationMs": 6598,
-    "profileDrift": []
-  },
-  {
-    "backend": "zendriver",
-    "mode": "direct",
-    "strategy": "native-only",
-    "localScore": 99,
-    "fpComScore": null,
-    "sannySoftPass": false,
-    "issues": [
-      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
-    ],
-    "durationMs": 6593,
-    "profileDrift": []
-  },
-  {
-    "backend": "zendriver",
-    "mode": "direct",
-    "strategy": "full-stealth",
-    "localScore": 99,
-    "fpComScore": null,
-    "sannySoftPass": false,
-    "issues": [
-      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
-    ],
-    "durationMs": 6592,
-    "profileDrift": []
-  },
-  {
-    "backend": "zendriver",
-    "mode": "proxy-routed",
     "strategy": "optimal",
     "localScore": 99,
     "fpComScore": null,
@@ -204,7 +165,46 @@
     "issues": [
       "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
     ],
-    "durationMs": 6460,
+    "durationMs": 6669,
+    "profileDrift": []
+  },
+  {
+    "backend": "zendriver",
+    "mode": "direct",
+    "strategy": "native-only",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
+    ],
+    "durationMs": 6682,
+    "profileDrift": []
+  },
+  {
+    "backend": "zendriver",
+    "mode": "direct",
+    "strategy": "full-stealth",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
+    ],
+    "durationMs": 6654,
+    "profileDrift": []
+  },
+  {
+    "backend": "zendriver",
+    "mode": "proxy-routed",
+    "strategy": "optimal",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
+    ],
+    "durationMs": 6497,
     "profileDrift": []
   },
   {
@@ -217,7 +217,7 @@
     "issues": [
       "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
     ],
-    "durationMs": 6458,
+    "durationMs": 6603,
     "profileDrift": []
   },
   {
@@ -230,7 +230,7 @@
     "issues": [
       "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
     ],
-    "durationMs": 6457,
+    "durationMs": 6596,
     "profileDrift": []
   }
 ]

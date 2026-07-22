@@ -11,6 +11,8 @@ import logging
 
 import zendriver as zd
 
+logging.basicConfig(level=logging.DEBUG)
+
 async def main():
     try:
         # Read config from stdin line
@@ -24,6 +26,7 @@ async def main():
                 proxy_str = p["server"]
         
         browser_args = [
+            "--no-sandbox",
             "--window-position=-2000,-2000",
             "--window-size=1280,720",
             "--disable-features=PasswordCheckup",
@@ -39,8 +42,9 @@ async def main():
             browser_args.append(f"--user-agent={user_agent}")
             
         browser = await zd.start(
-            headless=False,
-            browser_args=browser_args
+            headless=True,
+            browser_args=browser_args,
+            sandbox=False
         )
         
         result = {

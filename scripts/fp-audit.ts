@@ -33,11 +33,16 @@ process.on('unhandledRejection', (reason) => {
 const MOBILE_MODE = process.argv.includes('--mobile');
 
 // Backends to audit
-const BACKENDS: Array<{ name: string; opts: Partial<SessionOpts> }> = [
+const ALL_BACKENDS: Array<{ name: string; opts: Partial<SessionOpts> }> = [
   { name: 'cloak-headless', opts: { backend: 'cloak-headless', headless: true } },
   { name: 'stealth', opts: { backend: 'stealth', headless: true } },
   { name: 'zendriver', opts: { backend: 'zendriver', headless: true } },
 ];
+
+const targetBackend = process.argv[2];
+const BACKENDS = targetBackend && !targetBackend.startsWith('--')
+  ? ALL_BACKENDS.filter(b => b.name === targetBackend)
+  : ALL_BACKENDS;
 
 const FP_STRATEGIES = [
   { name: 'optimal', label: 'Optimal (auto per backend)' },

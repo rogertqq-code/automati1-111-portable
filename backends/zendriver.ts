@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 import path from "path";
 import { createLogger } from "../src/core/logger.js";
 import { ConfigStore } from "../src/core/config-store.js";
-import { type SessionOpts, type SessionHandle, acquireHeadedSlot, gridBounds, releaseHeadedSlot, applyProxyProtocolOverride, resolveTlsProfile } from "./index.js";
+import { type SessionOpts, type SessionHandle, acquireHeadedSlot, gridBounds, releaseHeadedSlot, applyProxyProtocolOverride, resolveTlsProfile, checkAiFingerprint } from "./index.js";
 import { loadSpiderSettings, ProxyProtocol } from "../src/core/spider-settings.js";
 import { startProxyForwarder, type ProxyForwarder } from "../src/proxy/proxy-forwarder.js";
 import { startHttpCloakForwarder } from "./httpcloak-forwarder.js";
@@ -50,6 +50,19 @@ export async function createZendriverSession(opts: SessionOpts): Promise<Session
     sBounds = await gridBounds(slot);
   }
 
+  const uaProfile = opts.email ? getConsistentUserAgent(opts.email, opts.osProfile, opts.proxyPool, "chrome", opts.rotation) : undefined;
+  const hardwareProfile = opts.email ? getConsistentHardware(opts.email, uaProfile?.os, opts.rotation, opts.proxyPool) : undefined;
+  const geoProfile = opts.email ? alignGeoToProxy(opts.proxy?.server, opts.email) : alignGeoToProxy(opts.proxy?.server, seed);
+  // Issue 31: Compute all profile fields that the engine reads downstream
+  const noiseProfile = opts.email ? buildCredentialNoiseProfile(opts.email) : undefined;
+  const fontProfile = opts.email ? getFontProfile(opts.email) : undefined;
+  const extensionProfile = opts.email ? getExtensionProfile(opts.email) : undefined;
+  const cacheProfile = opts.email ? getCacheProfile(opts.email, uaProfile?.chromeMajor ?? 148) : undefined;
+  // Issue 31: Build resolution profile for downstream fingerprint info logging
+  const resolutionProfile = opts.email ? getConsistentResolution(opts.email) : { width: 1920, height: 1080, share: 0, label: "FHD-fallback" };
+
+  await checkAiFingerprint(opts, { email: opts.email, uaProfile, hardwareProfile, geoProfile, fontProfile, cacheProfile, proxyServerStr: opts.proxy?.server, resolved: { viewport: { width: resolutionProfile.width, height: resolutionProfile.height } } });
+
   const delimiter = process.platform === 'win32' ? ';' : ':';
   const homeDir = process.platform === 'win32' ? process.env.USERPROFILE : process.env.HOME;
   const localBin = homeDir ? path.join(homeDir, '.local', 'bin') : '';
@@ -63,14 +76,6 @@ export async function createZendriverSession(opts: SessionOpts): Promise<Session
     log.error(`[${sessionId}] Failed to spawn uv (zendriver): ${err.message}`);
   });
 
-  const uaProfile = opts.email ? getConsistentUserAgent(opts.email, opts.osProfile, opts.proxyPool, "chrome", opts.rotation) : undefined;
-  const hardwareProfile = opts.email ? getConsistentHardware(opts.email, uaProfile?.os, opts.rotation, opts.proxyPool) : undefined;
-  const geoProfile = opts.email ? alignGeoToProxy(opts.proxy?.server, opts.email) : alignGeoToProxy(opts.proxy?.server, seed);
-  // Issue 31: Compute all profile fields that the engine reads downstream
-  const noiseProfile = opts.email ? buildCredentialNoiseProfile(opts.email) : undefined;
-  const fontProfile = opts.email ? getFontProfile(opts.email) : undefined;
-  const extensionProfile = opts.email ? getExtensionProfile(opts.email) : undefined;
-  const cacheProfile = opts.email ? getCacheProfile(opts.email, uaProfile?.chromeMajor ?? 148) : undefined;
 
   let forwarder: ProxyForwarder | null = null;
   let proxyConfig: any = undefined;
@@ -321,8 +326,7 @@ export async function createZendriverSession(opts: SessionOpts): Promise<Session
     throw e;
   });
 
-  // Issue 31: Build resolution profile for downstream fingerprint info logging
-  const resolutionProfile = opts.email ? getConsistentResolution(opts.email) : { width: 1920, height: 1080, share: 0, label: "FHD-fallback" };
+
 
   const handle: SessionHandle = {
     context,

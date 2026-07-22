@@ -24,6 +24,7 @@ async def main():
                 proxy_str = p["server"]
         
         browser_args = [
+            "--no-sandbox",
             "--disable-features=PasswordCheckup",
             "--password-store=basic",
             "--test-type",
@@ -46,7 +47,8 @@ async def main():
             
         browser = await zd.start(
             headless=False,
-            browser_args=browser_args
+            browser_args=browser_args,
+            sandbox=False
         )
         
         result = {
