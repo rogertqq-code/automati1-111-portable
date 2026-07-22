@@ -5578,7 +5578,7 @@ export class AutomationEngine extends EventEmitter {
                 "engine.ts:5084",
                 async () => universalLoginFlow({
                   page,
-                  siteName: site.name as "joe" | "ignition",
+                  siteName: site.name,
                   targetEmail,
                   password: pw!,
                   attemptIdx,

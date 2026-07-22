@@ -79,7 +79,7 @@ export class BrowserTiler {
       return null;
     }
 
-    let monitors = windowManager.getMonitors();
+    const monitors = windowManager.getMonitors();
     let screen = { x: 0, y: 0, width: 1920, height: 1080 };
     
     let windowsPerMonitor = this.totalWindows;

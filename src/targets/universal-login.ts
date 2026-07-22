@@ -31,7 +31,7 @@ export async function installEarlyRememberMeHook(page: Page) {
       if (!targetEl) {
         const labels = document.querySelectorAll('label');
         for (const el of Array.from(labels)) {
-          const label = el as HTMLLabelElement;
+          const label = el;
           if (label.textContent && label.textContent.toLowerCase().includes('remember')) {
             targetEl = label;
             break;

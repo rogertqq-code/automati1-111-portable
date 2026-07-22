@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/require-await*/
+/* eslint-disable @typescript-eslint/require-await*/
 /**
  * Research Orchestrator
  *

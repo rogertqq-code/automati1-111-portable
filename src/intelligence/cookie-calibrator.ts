@@ -98,7 +98,7 @@ async function runCalibration(url: string, siteName: string) {
           }, 500);
         });
       })();
-    `) as { selectorPath: string, coordinates: { x: number, y: number, width: number, height: number } } | null;
+    `);
 
     if (result) {
       console.log(`[Calibrator] ✅ Found Cookie Banner!`);

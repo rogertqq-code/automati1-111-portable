@@ -64,7 +64,7 @@ describe("browser-tiler", () => {
       const s3Promise = tiler.acquireSlot();
       let resolved = false;
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      s3Promise.then(() => resolved = true);
+      s3Promise.then(() => { resolved = true; });
       
       // Wait a tick
       await new Promise(r => setTimeout(r, 0));
