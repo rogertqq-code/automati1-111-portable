@@ -1,0 +1,236 @@
+[
+  {
+    "backend": "cloak-headless",
+    "mode": "direct",
+    "strategy": "optimal",
+    "localScore": 0,
+    "fpComScore": 33,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Plugins is of type PluginArray: failed, PHANTOM_WINDOW_HEIGHT: FAIL"
+    ],
+    "durationMs": 36594,
+    "profileDrift": []
+  },
+  {
+    "backend": "cloak-headless",
+    "mode": "direct",
+    "strategy": "native-only",
+    "localScore": 0,
+    "fpComScore": 33,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Plugins is of type PluginArray: failed"
+    ],
+    "durationMs": 40758,
+    "profileDrift": []
+  },
+  {
+    "backend": "cloak-headless",
+    "mode": "direct",
+    "strategy": "full-stealth",
+    "localScore": 0,
+    "fpComScore": 33,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Plugins is of type PluginArray: failed, MQ_SCREEN: FAIL, PHANTOM_WINDOW_HEIGHT: FAIL"
+    ],
+    "durationMs": 32761,
+    "profileDrift": []
+  },
+  {
+    "backend": "cloak-headless",
+    "mode": "proxy-routed",
+    "strategy": "optimal",
+    "localScore": 0,
+    "fpComScore": 33,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Plugins is of type PluginArray: failed"
+    ],
+    "durationMs": 32504,
+    "profileDrift": []
+  },
+  {
+    "backend": "cloak-headless",
+    "mode": "proxy-routed",
+    "strategy": "native-only",
+    "localScore": 0,
+    "fpComScore": 33,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Plugins is of type PluginArray: failed"
+    ],
+    "durationMs": 40456,
+    "profileDrift": []
+  },
+  {
+    "backend": "cloak-headless",
+    "mode": "proxy-routed",
+    "strategy": "full-stealth",
+    "localScore": 0,
+    "fpComScore": 33,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Plugins is of type PluginArray: failed, MQ_SCREEN: FAIL, PHANTOM_WINDOW_HEIGHT: FAIL"
+    ],
+    "durationMs": 36418,
+    "profileDrift": []
+  },
+  {
+    "backend": "stealth",
+    "mode": "direct",
+    "strategy": "optimal",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Chrome (New): missing (failed)"
+    ],
+    "durationMs": 76997,
+    "profileDrift": []
+  },
+  {
+    "backend": "stealth",
+    "mode": "direct",
+    "strategy": "native-only",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Chrome (New): missing (failed)"
+    ],
+    "durationMs": 77148,
+    "profileDrift": []
+  },
+  {
+    "backend": "stealth",
+    "mode": "direct",
+    "strategy": "full-stealth",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Chrome (New): missing (failed)"
+    ],
+    "durationMs": 77116,
+    "profileDrift": []
+  },
+  {
+    "backend": "stealth",
+    "mode": "proxy-routed",
+    "strategy": "optimal",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Chrome (New): missing (failed)"
+    ],
+    "durationMs": 77142,
+    "profileDrift": []
+  },
+  {
+    "backend": "stealth",
+    "mode": "proxy-routed",
+    "strategy": "native-only",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Chrome (New): missing (failed)"
+    ],
+    "durationMs": 76984,
+    "profileDrift": []
+  },
+  {
+    "backend": "stealth",
+    "mode": "proxy-routed",
+    "strategy": "full-stealth",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "SannySoft Failed: Chrome (New): missing (failed)"
+    ],
+    "durationMs": 77427,
+    "profileDrift": []
+  },
+  {
+    "backend": "zendriver",
+    "mode": "direct",
+    "strategy": "optimal",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
+    ],
+    "durationMs": 6598,
+    "profileDrift": []
+  },
+  {
+    "backend": "zendriver",
+    "mode": "direct",
+    "strategy": "native-only",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
+    ],
+    "durationMs": 6593,
+    "profileDrift": []
+  },
+  {
+    "backend": "zendriver",
+    "mode": "direct",
+    "strategy": "full-stealth",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
+    ],
+    "durationMs": 6592,
+    "profileDrift": []
+  },
+  {
+    "backend": "zendriver",
+    "mode": "proxy-routed",
+    "strategy": "optimal",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
+    ],
+    "durationMs": 6460,
+    "profileDrift": []
+  },
+  {
+    "backend": "zendriver",
+    "mode": "proxy-routed",
+    "strategy": "native-only",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
+    ],
+    "durationMs": 6458,
+    "profileDrift": []
+  },
+  {
+    "backend": "zendriver",
+    "mode": "proxy-routed",
+    "strategy": "full-stealth",
+    "localScore": 99,
+    "fpComScore": null,
+    "sannySoftPass": false,
+    "issues": [
+      "Launch Failed: Zendriver process exited with code 1 before endpoint was found"
+    ],
+    "durationMs": 6457,
+    "profileDrift": []
+  }
+]
