@@ -39,7 +39,7 @@ jobs:
           PROXY_ROTATE_URL_TEMPLATE: ${{ secrets.PROXY_ROTATE_URL_TEMPLATE }}
 
       - name: Commit changes
-        uses: stefanzweifel/git-auto-commit-action@v5
+        uses: stefanzweifel/git-auto-commit-action@v7
         with:
           commit_message: "test: update linux visual snapshots"
           file_pattern: "tests/visual/**/*-snapshots/*.png"
