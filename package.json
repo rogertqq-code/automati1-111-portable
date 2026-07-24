@@ -52,7 +52,7 @@
     "build:portable": "npx tsx scripts/build-portable-zip.ts"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1070.0",
+    "@aws-sdk/client-s3": "^3.1094.0",
     "@fingerprintjs/fingerprintjs": "^5.2.0",
     "@google-cloud/storage": "^7.19.0",
     "@google-cloud/vertexai": "^1.12.0",
